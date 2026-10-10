@@ -177,6 +177,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
         <div class="f full"><label for="price">Home price</label><input type="number" id="price" min="0" step="1000"></div>
         <div class="f"><label for="down">Down payment</label><input type="number" id="down" min="0" step="1000"></div>
         <div class="f"><label for="downPct">Down %</label><input type="number" id="downPct" min="0" max="100" step="0.5"></div>
+        <small class="f full" id="downHint" style="line-height:1.45"></small>
         <button type="button" class="linkbtn f full" id="useMin">Use the minimum down payment</button>
         <div class="f full" data-c="CA"><label for="province">Province</label>
           <select id="province">
@@ -951,7 +952,31 @@ function update() {
   renderRent(s); renderRefi(s); renderSolve(s); renderSchedule(r); renderTables(r, s); renderNotes();
 }
 
+function renderDownHint(r, s) {
+  const p = r.price, min = r.minDown, minPct = p ? pct(min / p, 2).replace(".00%", "%") : "—";
+  let how = "";
+  if (country === "CA") {
+    if (p >= 1500000) how = `Homes of ${fmt(1500000)} or more need 20% down; mortgage insurance isn't available.`;
+    else if (p <= 500000) how = `5% of the price.`;
+    else how = `5% of the first ${fmt(500000)} (${fmt(25000)}) + 10% of the remaining ${fmt(p - 500000)} (${fmt((p - 500000) * 0.1)}).`;
+  } else {
+    const t = s.loanType;
+    how = t === "va" ? "VA loans need no down payment." : t === "fha" ? "FHA needs 3.5% of the price." : r.jumbo ? "Jumbo loans: lenders typically want at least 10%." : s.firstTime ? "Conventional: 3% for first-time buyers." : "Conventional: 5% (3% for first-time buyers).";
+  }
+  let yours = "";
+  if (p > 0) {
+    const short = min - r.down;
+    yours = short > 0.5 ? ` <b style="color:var(--err)">You're ${fmt(short)} short.</b>`
+      : ` Your ${fmt(r.down)} is <b>${pct(r.dp, 2).replace(".00%", "%")}</b> of the price` +
+        (r.upfront ? ` → ${pct(r.upfrontRate, 2)} ${country === "CA" ? "insurance premium" : r.upfrontLabel}.` :
+         country === "CA" && r.dp >= 0.2 ? ", so no mortgage insurance is needed." :
+         country === "US" && r.sim.first.mi ? ` → PMI applies until you reach 20% equity.` : ".");
+  }
+  $("downHint").innerHTML = `<b>Minimum ${fmt(min)}${p ? ` (${minPct})` : ""}</b>: ${how}${yours}`;
+}
+
 function renderSummary(r, s) {
+  renderDownHint(r, s);
   const per = PERIOD[country][country === "CA" ? s.freq : s.freqUS];
   const f = r.sim.first || { pay: 0, interest: 0, mi: 0 };
   const parts = [
