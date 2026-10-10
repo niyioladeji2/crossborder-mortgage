@@ -66,6 +66,10 @@ details.grp[open]>summary::after{content:"−"}
 .f.full{grid-column:1/-1}
 .f label{font-size:13px;color:var(--muted)}
 .f small{font-size:12px;color:var(--muted)}
+.hdr-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.theme-seg button{display:inline-flex;align-items:center;gap:6px;padding:8px 12px}
+.theme-seg svg{width:16px;height:16px;flex:none}
+@media (max-width:520px){.theme-seg span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.theme-seg button{padding:8px 11px}}
 .money-wrap{position:relative;display:block;min-width:0}
 .money-wrap .cur{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font:500 15px var(--body)}
 .money-wrap input{padding-left:21px}
@@ -148,9 +152,16 @@ footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
     <h1>CrossBorder Mortgage Calculator</h1>
     <p>Payments, insurance, renewals and rate changes under Canadian and U.S. lending rules (2026).</p>
   </div>
-  <div class="seg" role="group" aria-label="Country">
-    <button id="btnCA" aria-pressed="true">Canada · CAD</button>
-    <button id="btnUS" aria-pressed="false">United States · USD</button>
+  <div class="hdr-controls">
+    <div class="seg" role="group" aria-label="Country">
+      <button id="btnCA" aria-pressed="true">Canada · CAD</button>
+      <button id="btnUS" aria-pressed="false">United States · USD</button>
+    </div>
+    <div class="seg theme-seg" role="group" aria-label="Appearance">
+      <button data-mode="auto" aria-pressed="true" title="Match device" aria-label="Match device appearance"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 3.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg><span>Auto</span></button>
+      <button data-mode="light" aria-pressed="false" title="Light mode" aria-label="Light mode"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M4.2 15.8l1.6-1.6M14.2 5.8l1.6-1.6"/></g></svg><span>Light</span></button>
+      <button data-mode="dark" aria-pressed="false" title="Dark mode" aria-label="Dark mode"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M15.8 12.6A6.6 6.6 0 0 1 7.4 4.2a6.6 6.6 0 1 0 8.4 8.4z" fill="currentColor"/></svg><span>Dark</span></button>
+    </div>
   </div>
 </header>
 
@@ -585,8 +596,8 @@ const Engine = (() => {
     if (inc > 0) {
       const housing = qPay + (+s.tax || 0) / 12 + (+s.heat || 0) + 0.5 * (+s.hoa || 0);
       gds = housing / inc; tds = (housing + (+s.debts || 0)) / inc;
-      if (gds > 0.39) msgs.push(["warn", `GDS at the stress-test rate is ${(gds * 100).toFixed(1)}%, above the 39% insured limit.`]);
-      if (tds > 0.44) msgs.push(["warn", `TDS at the stress-test rate is ${(tds * 100).toFixed(1)}%, above the 44% insured limit.`]);
+      if (gds > 0.39) msgs.push(["warn", `GDS at the stress-test rate is ${(gds * 100).toFixed(2)}%, above the 39% insured limit.`]);
+      if (tds > 0.44) msgs.push(["warn", `TDS at the stress-test rate is ${(tds * 100).toFixed(2)}%, above the 44% insured limit.`]);
     }
     // Trigger rate for fixed-payment variable
     let triggerRate = null;
@@ -654,8 +665,8 @@ const Engine = (() => {
     if (inc > 0) {
       front = monthlyHousing / inc; back = (monthlyHousing + (+s.debts || 0)) / inc;
       const lim = type === "fha" ? [0.31, 0.43] : type === "va" ? [null, 0.41] : [0.28, 0.36];
-      if (lim[0] && front > lim[0]) msgs.push(["warn", `Housing ratio is ${(front * 100).toFixed(1)}%, above the ${lim[0] * 100}% guideline. Automated underwriting can approve higher with strong credit or reserves.`]);
-      if (back > lim[1]) msgs.push(["warn", `Total debt-to-income is ${(back * 100).toFixed(1)}%, above the ${Math.round(lim[1] * 100)}% guideline.`]);
+      if (lim[0] && front > lim[0]) msgs.push(["warn", `Housing ratio is ${(front * 100).toFixed(2)}%, above the ${lim[0] * 100}% guideline. Automated underwriting can approve higher with strong credit or reserves.`]);
+      if (back > lim[1]) msgs.push(["warn", `Total debt-to-income is ${(back * 100).toFixed(2)}%, above the ${Math.round(lim[1] * 100)}% guideline.`]);
     }
     if (mi && type === "conv") msgs.push(["info", `PMI (${miRate.toFixed(2)}%/yr) ends automatically when the balance reaches 78% of the original value; you can ask to cancel at 80%.`]);
     if (type === "fha") msgs.push(["info", miYears === Infinity ? "With under 10% down, FHA annual MIP lasts for the life of the loan. Refinancing to conventional is the usual way out." : "With 10%+ down, FHA annual MIP ends after 11 years."]);
@@ -894,7 +905,7 @@ try { const saved = JSON.parse(localStorage.getItem("xb-mortgage") || "null"); i
 const save = () => { try { localStorage.setItem("xb-mortgage", JSON.stringify({ ...state, country })); } catch (e) {} };
 
 const fmt = (v, d = 0) => new Intl.NumberFormat(country === "CA" ? "en-CA" : "en-US", { style: "currency", currency: country === "CA" ? "CAD" : "USD", minimumFractionDigits: d, maximumFractionDigits: d }).format(v || 0);
-const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const pct = (v, d = 2) => (v * 100).toFixed(d) + "%";
 const yrs = y => { const Y = Math.floor(y + 1e-9), M = Math.round((y - Y) * 12); if (M === 12) return `${Y + 1} yr`; if (Y === 0) return `${M} mo`; return `${Y} yr${M ? " " + M + " mo" : ""}`; };
 const PERIOD = { CA: { m: "month", sm: "semi-monthly payment", bw: "every 2 weeks", abw: "every 2 weeks", w: "week", aw: "week" }, US: { m: "month", bw: "every 2 weeks" } };
 
@@ -1038,7 +1049,7 @@ function renderSummary(r, s) {
     if (r.gds != null) facts.push(["GDS / TDS", `${pct(r.gds)} / ${pct(r.tds)}`]);
   } else {
     if (r.arm) {
-      facts.push([`Rate after ${r.arm.initYears} yrs`, `${r.arm.firstReset.toFixed(3)}%`]);
+      facts.push([`Rate after ${r.arm.initYears} yrs`, `${r.arm.firstReset.toFixed(2)}%`]);
       facts.push(["Highest payment at your index", fmt(r.arm.resetPay * r.n / 12) + " / mo"]);
       facts.push(["Worst case (caps maxed)", fmt(r.arm.worstPay * r.n / 12) + " / mo"]);
     }
@@ -1109,7 +1120,7 @@ function renderCash(r, s) {
 function renderOffers(s) {
   const o = Engine.compareOffers(country, s), per = country === "CA" ? s.freq : s.freqUS;
   const sh = { m: "/mo", sm: "/semi-mo", bw: "/2 wk", abw: "/2 wk", w: "/wk", aw: "/wk" }[per];
-  const col = (k, x) => `<div class="legend"><h3>Offer ${k} · ${x.rate.toFixed(3).replace(/0$/, "")}%</h3>
+  const col = (k, x) => `<div class="legend"><h3>Offer ${k} · ${x.rate.toFixed(2)}%</h3>
     <div><span>Payment</span><b>${fmt(x.pay, 2)}${sh}</b></div><div><span>Interest over ${o.horizon} yrs</span><b>${fmt(x.interest)}</b></div>
     <div><span>${country === "CA" ? "Fees" : "Points & fees"}</span><b>${fmt(x.fees)}</b></div>${x.cash ? `<div><span>${country === "CA" ? "Cash back" : "Lender credit"}</span><b>−${fmt(x.cash)}</b></div>` : ""}
     <div><span>Balance after ${o.horizon} yrs</span><b>${fmt(x.balance)}</b></div><div class="tot"><span>Net cost</span><b>${fmt(x.total)}</b></div></div>`;
@@ -1168,6 +1179,29 @@ $("copyBtn").onclick = () => {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lines).then(() => { box.hidden = true; done("Copied."); }, fallback);
   else fallback();
 };
+
+/* ---------- Appearance: auto / light / dark ---------- */
+const hostTheme = document.documentElement.getAttribute("data-theme");
+let themeMode = "auto";
+try { themeMode = localStorage.getItem("xb-theme") || "auto"; } catch (e) {}
+function applyTheme(mode) {
+  themeMode = ["auto", "light", "dark"].includes(mode) ? mode : "auto";
+  const root = document.documentElement;
+  if (themeMode === "auto") { if (hostTheme) root.setAttribute("data-theme", hostTheme); else root.removeAttribute("data-theme"); }
+  else root.setAttribute("data-theme", themeMode);
+  document.querySelectorAll(".theme-seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === themeMode));
+  const dark = themeMode === "dark" || (themeMode === "auto" && (root.getAttribute("data-theme") === "dark" || (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches)));
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.removeAttribute("media"); m.setAttribute("content", dark ? "#0e1412" : "#1c6a51"); });
+  try { localStorage.setItem("xb-theme", themeMode); } catch (e) {}
+}
+document.querySelectorAll(".theme-seg button").forEach(b => b.onclick = () => applyTheme(b.dataset.mode));
+applyTheme(themeMode);
+
+/* Round number inputs (rates, percentages) to 2 decimals when you leave the field */
+document.addEventListener("change", e => {
+  const el = e.target;
+  if (el.type === "number" && el.value !== "" && /\.\d{3,}/.test(el.value)) { el.value = String(Math.round(+el.value * 100) / 100); readForm(); update(); }
+});
 
 /* ---------- Tabs ---------- */
 const TABS = ["calc", "rent", "refi", "solve"];
