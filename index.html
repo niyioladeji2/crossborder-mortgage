@@ -1,0 +1,1385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c6a51" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1412" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mortgage">
+<meta name="description" content="Canada and U.S. mortgage calculator: payments, insurance, affordability, rent vs buy, refinance and more.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+body{margin:0;-webkit-tap-highlight-color:transparent}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>CrossBorder Mortgage Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: two-pane workbench — inputs ledger on the left, live results on the right; stacks summary → inputs → detail on phones */
+:root{
+  --bg:#eef2ef; --surface:#ffffff; --sunk:#f5f8f6; --ink:#14201b; --muted:#5a6a62; --line:#d6dfd9;
+  --accent:#1c6a51; --accent-ink:#ffffff; --interest:#c0832a; --mi:#7a6bb0; --tax:#8fa39a;
+  --err:#b3322e; --err-bg:#fbeceb; --warn:#8f5c0c; --warn-bg:#fcf3e2; --ok:#1c6a51; --ok-bg:#e6f2ec;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Instrument Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1412; --surface:#16201c; --sunk:#111915; --ink:#e4ebe7; --muted:#93a39b; --line:#2a3732;
+  --accent:#4cb58c; --accent-ink:#06120d; --interest:#e2a650; --mi:#a597de; --tax:#6f8279;
+  --err:#f07a72; --err-bg:#3a1a18; --warn:#e9b45a; --warn-bg:#33270f; --ok:#4cb58c; --ok-bg:#12291f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1412; --surface:#16201c; --sunk:#111915; --ink:#e4ebe7; --muted:#93a39b; --line:#2a3732;
+  --accent:#4cb58c; --accent-ink:#06120d; --interest:#e2a650; --mi:#a597de; --tax:#6f8279;
+  --err:#f07a72; --err-bg:#3a1a18; --warn:#e9b45a; --warn-bg:#33270f; --ok:#4cb58c; --ok-bg:#12291f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--body);font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font:700 clamp(24px,4vw,34px)/1.05 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
+header p{margin:4px 0 0;color:var(--muted);max-width:56ch}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{font:600 14px var(--body);border:0;background:none;color:var(--muted);padding:8px 16px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);grid-template-areas:"form sum" "form det";gap:18px;align-items:start}
+.sum{grid-area:sum}.form{grid-area:form}.det{grid-area:det;display:grid;gap:18px;min-width:0}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"sum" "form" "det"}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.form{display:grid;gap:0;overflow:hidden}
+details.grp{border-top:1px solid var(--line)}
+details.grp:first-child{border-top:0}
+details.grp>summary{list-style:none;cursor:pointer;padding:14px 16px;font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary::after{content:"+";font-size:16px;line-height:1}
+details.grp[open]>summary::after{content:"−"}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 16px}
+.f{display:grid;gap:4px;min-width:0}
+.f.full{grid-column:1/-1}
+.f label{font-size:13px;color:var(--muted)}
+.f small{font-size:12px;color:var(--muted)}
+input[type=number],select{width:100%;font:500 15px var(--body);color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-variant-numeric:tabular-nums}
+input[type=number]{appearance:textfield}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px}
+.chk input{accent-color:var(--accent);width:16px;height:16px}
+.inline{display:flex;gap:8px}
+.inline>*{flex:1;min-width:0}
+.linkbtn{background:none;border:0;color:var(--accent);font:600 12px var(--body);padding:0;cursor:pointer;justify-self:start}
+.sum{padding:20px}
+.eyebrow{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.big{font:700 clamp(38px,6vw,56px)/1 var(--display);letter-spacing:-.03em;margin:6px 0 2px}
+.big span{font:500 16px var(--body);letter-spacing:0;color:var(--muted);margin-left:6px}
+.stack{display:flex;height:10px;border-radius:5px;overflow:hidden;margin:16px 0 10px;background:var(--sunk)}
+.stack i{display:block;height:100%}
+.legend{display:grid;gap:6px}
+.legend div{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.legend b{font-weight:600}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:8px;vertical-align:0}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line);margin:18px -20px -20px;border-radius:0 0 14px 14px;overflow:hidden}
+.facts div{background:var(--surface);padding:12px 16px}
+.facts dt{font-size:12px;color:var(--muted)}
+.facts dd{margin:2px 0 0;font:600 17px var(--body)}
+.msgs{display:grid;gap:8px;margin-top:14px}
+.msg{font-size:13.5px;padding:9px 12px;border-radius:8px;border:1px solid transparent}
+.msg.err{background:var(--err-bg);color:var(--err);border-color:color-mix(in srgb,var(--err) 30%,transparent)}
+.msg.warn{background:var(--warn-bg);color:var(--warn)}
+.msg.info{background:var(--ok-bg);color:var(--ink)}
+.card{padding:18px 20px;min-width:0}
+.card h2{font:700 19px/1.2 var(--display);margin:0 0 4px;letter-spacing:-.01em}
+.card>p{margin:0 0 12px;color:var(--muted);font-size:14px}
+.chart{width:100%;min-height:200px}
+.chart svg{display:block;width:100%}
+.chart text{fill:var(--muted);font:11px var(--body)}
+.tblwrap{overflow-x:auto;margin:0 -20px;padding:0 20px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font:600 12px var(--body);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+tr.cur td{background:var(--ok-bg);font-weight:600}
+td.na{color:var(--muted)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}
+details.sched>summary{cursor:pointer;font:600 14px var(--body);color:var(--accent);padding:6px 0}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px 28px;font-size:14px}
+.notes h3{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:6px 0}
+.notes ul{margin:0;padding-left:18px;display:grid;gap:5px}
+.notes a{color:var(--accent)}
+.aff{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px 24px;align-items:end}
+.aff .num{font:700 clamp(28px,4.4vw,38px)/1.05 var(--display);letter-spacing:-.02em}
+.aff .sub{font:600 18px var(--body)}
+.aff .lbl{font-size:12.5px;color:var(--muted)}
+.affbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:14px}
+.pill{display:inline-block;font:600 12px var(--body);padding:3px 9px;border-radius:999px;background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--err-bg);color:var(--err)}
+.btn{font:600 13px var(--body);border:1px solid var(--accent);color:var(--accent);background:none;border-radius:999px;padding:6px 12px;cursor:pointer}
+.empty{font-size:14px;color:var(--muted);background:var(--sunk);border:1px dashed var(--line);border-radius:10px;padding:14px}
+.offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;align-items:end;margin-bottom:14px}
+.offers fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 12px 12px;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+.offers legend{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:0 4px}
+.verdict{font:600 16px var(--body);margin:4px 0 10px}
+.legend .tot{border-top:1px solid var(--line);padding-top:6px;margin-top:2px}
+.legend h3{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 18px;scrollbar-width:none}
+.tabs button{font:600 14px var(--body);color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:10px 14px;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tool{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.tool{grid-template-columns:minmax(0,1fr)}}
+td.fit{background:var(--ok-bg);color:var(--ok);font-weight:600}
+td.hot{outline:2px solid var(--accent);outline-offset:-2px}
+footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <div>
+    <h1>CrossBorder Mortgage Calculator</h1>
+    <p>Payments, insurance, renewals and rate changes under Canadian and U.S. lending rules (2026).</p>
+  </div>
+  <div class="seg" role="group" aria-label="Country">
+    <button id="btnCA" aria-pressed="true">Canada · CAD</button>
+    <button id="btnUS" aria-pressed="false">United States · USD</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Tools">
+  <button role="tab" id="t-calc" aria-controls="tab-calc" aria-selected="true">Mortgage</button>
+  <button role="tab" id="t-rent" aria-controls="tab-rent" aria-selected="false">Rent vs buy</button>
+  <button role="tab" id="t-refi" aria-controls="tab-refi" aria-selected="false">Refinance</button>
+  <button role="tab" id="t-solve" aria-controls="tab-solve" aria-selected="false">Solve for…</button>
+</nav>
+
+<div id="tab-calc" role="tabpanel" aria-labelledby="t-calc">
+<div class="grid">
+  <section class="panel sum" aria-live="polite">
+    <div class="eyebrow" id="payLabel">First payment</div>
+    <div class="big" id="payBig">—</div>
+    <div class="stack" id="payStack"></div>
+    <div class="legend" id="payLegend"></div>
+    <div class="msgs" id="msgs"></div>
+    <div class="affbar" style="border-top:0;padding-top:0"><button type="button" class="btn" id="copyBtn">Copy summary to share</button><span id="copyStatus" class="lbl" style="color:var(--muted);font-size:13px"></span></div>
+    <textarea id="shareBox" hidden readonly style="width:100%;height:150px;margin-top:8px;font:13px var(--body);background:var(--sunk);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px"></textarea>
+    <dl class="facts" id="facts"></dl>
+  </section>
+
+  <form class="panel form" id="form" onsubmit="return false">
+    <details class="grp" open><summary>Home &amp; down payment</summary>
+      <div class="fields">
+        <div class="f full"><label for="price">Home price</label><input type="number" id="price" min="0" step="1000"></div>
+        <div class="f"><label for="down">Down payment</label><input type="number" id="down" min="0" step="1000"></div>
+        <div class="f"><label for="downPct">Down %</label><input type="number" id="downPct" min="0" max="100" step="0.5"></div>
+        <button type="button" class="linkbtn f full" id="useMin">Use the minimum down payment</button>
+        <div class="f full" data-c="CA"><label for="province">Province</label>
+          <select id="province">
+            <option value="AB">Alberta</option><option value="BC">British Columbia</option><option value="MB">Manitoba</option>
+            <option value="NB">New Brunswick</option><option value="NL">Newfoundland and Labrador</option><option value="NS">Nova Scotia</option>
+            <option value="ON">Ontario</option><option value="PE">Prince Edward Island</option><option value="QC">Quebec</option>
+            <option value="SK">Saskatchewan</option><option value="TER">Territories</option>
+          </select><small>Sets provincial sales tax on the insurance premium.</small></div>
+        <label class="chk f full"><input type="checkbox" id="firstTime"> First-time home buyer</label>
+        <label class="chk f full" data-c="CA"><input type="checkbox" id="newBuild"> Newly built home</label>
+        <div class="f full" data-c="US"><label for="loanType">Loan program</label>
+          <select id="loanType" style="font-weight:600;border-color:var(--accent)"><option value="conv">Conventional (Fannie/Freddie)</option><option value="fha">FHA</option><option value="va">VA</option></select></div>
+        <div class="f" data-c="US" data-when="conv"><label for="limit">County conforming limit</label><input type="number" id="limit" step="250"></div>
+        <div class="f" data-c="US" data-when="conv"><label for="pmi">PMI rate %/yr</label><input type="number" id="pmi" step="0.05" placeholder="Auto"></div>
+        <div class="f full" data-c="US" data-when="fha"><label for="fhaLimit">County FHA loan limit</label><input type="number" id="fhaLimit" step="250"></div>
+        <div class="f full" data-c="US" data-when="va"><label for="vaUse">VA benefit use</label>
+          <select id="vaUse"><option value="first">First use</option><option value="sub">Subsequent use</option><option value="exempt">Exempt (service-connected disability)</option></select></div>
+        <label class="chk f full" data-c="US" data-when="upfront"><input type="checkbox" id="finance"> Finance the upfront fee into the loan</label>
+      </div>
+    </details>
+
+    <details class="grp" open><summary>Rate &amp; term</summary>
+      <div class="fields">
+        <div class="f" data-c="CA"><label for="rateType">Rate type</label>
+          <select id="rateType"><option value="fixed">Fixed</option><option value="variable">Variable</option></select></div>
+        <div class="f" data-c="US"><label for="rateTypeUS">Rate type</label>
+          <select id="rateTypeUS"><option value="fixed">Fixed</option><option value="arm">Adjustable (ARM)</option></select></div>
+        <div class="f"><label for="rate" id="rateLabel">Interest rate %</label><input type="number" id="rate" min="0" step="0.01"></div>
+        <small class="f full" id="rateHint"></small>
+
+        <div class="f" data-c="CA"><label for="term">Term</label>
+          <select id="term"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>7</option><option>10</option></select><small>Years until renewal</small></div>
+        <div class="f" data-c="CA"><label for="amort">Amortization</label>
+          <select id="amort"><option>15</option><option>20</option><option>25</option><option>30</option></select><small>Years to pay off</small></div>
+        <div class="f full" data-c="CA"><label for="freq">Payment frequency</label>
+          <select id="freq"><option value="m">Monthly</option><option value="sm">Semi-monthly</option><option value="bw">Bi-weekly</option><option value="abw">Accelerated bi-weekly</option><option value="w">Weekly</option><option value="aw">Accelerated weekly</option></select></div>
+        <div class="f" data-c="CA"><label for="comp">Compounding</label>
+          <select id="comp"><option value="auto">Lender default</option><option value="semi">Semi-annual</option><option value="monthly">Monthly</option></select></div>
+        <div class="f" data-c="CA"><label for="renewRate">Renewal rate %</label><input type="number" id="renewRate" step="0.01" placeholder="Same"><small>Assumed after the term</small></div>
+        <div class="f full" data-c="CA" data-when="variable"><label for="varMode">When prime changes</label>
+          <select id="varMode"><option value="adjust">Payment changes (adjustable-rate)</option><option value="fixedPayment">Payment stays, amortization shifts</option></select></div>
+        <div class="f" data-c="CA" data-when="variable"><label for="shift">Rate change (± %)</label><input type="number" id="shift" step="0.25"></div>
+        <div class="f" data-c="CA" data-when="variable"><label for="shiftAfter">Starting month</label><input type="number" id="shiftAfter" min="0" step="1"></div>
+
+        <div class="f" data-c="US"><label for="termUS">Loan term</label>
+          <select id="termUS"><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option></select></div>
+        <div class="f" data-c="US"><label for="freqUS">Payments</label>
+          <select id="freqUS"><option value="m">Monthly</option><option value="bw">Bi-weekly (½ monthly)</option></select></div>
+        <div class="f full" data-c="US" data-when="arm"><label for="arm">ARM product</label>
+          <select id="arm"><option value="5/6">5/6 SOFR ARM</option><option value="7/6">7/6 SOFR ARM</option><option value="10/6">10/6 SOFR ARM</option><option value="5/1">5/1 ARM</option><option value="7/1">7/1 ARM</option><option value="10/1">10/1 ARM</option></select>
+          <small>Fixed years / months between adjustments.</small></div>
+        <div class="f" data-c="US" data-when="arm"><label for="index">Index at reset %</label><input type="number" id="index" step="0.05"><small>e.g. 30-day avg SOFR</small></div>
+        <div class="f" data-c="US" data-when="arm"><label for="margin">Margin %</label><input type="number" id="margin" step="0.125"></div>
+        <div class="f full" data-c="US" data-when="arm"><label>Caps: initial / periodic / lifetime %</label>
+          <div class="inline"><input type="number" id="capI" step="0.5" aria-label="Initial cap"><input type="number" id="capP" step="0.5" aria-label="Periodic cap"><input type="number" id="capL" step="0.5" aria-label="Lifetime cap"></div></div>
+      </div>
+    </details>
+
+    <details class="grp" open><summary>Ownership &amp; closing costs</summary>
+      <div class="fields">
+        <div class="f"><label for="tax">Property tax / yr</label><input type="number" id="tax" min="0" step="100"></div>
+        <div class="f"><label for="ins">Home insurance / yr</label><input type="number" id="ins" min="0" step="100"></div>
+        <div class="f"><label for="hoa" id="hoaLabel">HOA / month</label><input type="number" id="hoa" min="0" step="25"></div>
+        <div class="f" data-c="CA"><label for="heat">Heating / month</label><input type="number" id="heat" min="0" step="10"><small>Used for GDS</small></div>
+        <div class="f"><label for="util">Utilities / month</label><input type="number" id="util" min="0" step="25"></div>
+        <div class="f"><label for="maint">Maintenance %/yr</label><input type="number" id="maint" min="0" step="0.25"><small>Of home value; 1–2% is typical</small></div>
+        <label class="chk f full" data-c="CA" id="bigCityWrap"><input type="checkbox" id="bigCity"> <span id="bigCityText">Property is in Toronto</span></label>
+        <div class="f full" data-c="CA"><label for="closingOther">Legal, inspection, appraisal &amp; title</label><input type="number" id="closingOther" min="0" step="100"></div>
+        <div class="f full" data-c="US"><label for="closingPct">Closing costs, % of loan</label><input type="number" id="closingPct" min="0" step="0.25"><small>Lender, title, escrow and recording fees; usually 2–5%.</small></div>
+      </div>
+    </details>
+
+    <details class="grp"><summary>Prepayments</summary>
+      <div class="fields">
+        <div class="f"><label for="extra">Extra per payment</label><input type="number" id="extra" min="0" step="25"></div>
+        <div class="f"><label for="lump">Lump sum / year</label><input type="number" id="lump" min="0" step="500"></div>
+        <small class="f full" data-c="CA">Most Canadian closed mortgages allow 10–20% of the original balance per year without penalty.</small>
+      </div>
+    </details>
+
+    <details class="grp" id="qualGrp" open><summary>Qualification</summary>
+      <div class="fields">
+        <div class="f"><label for="income">Gross household income / yr</label><input type="number" id="income" min="0" step="1000"></div>
+        <div class="f"><label for="debts">Other debt payments / month</label><input type="number" id="debts" min="0" step="25"></div>
+        <div class="f"><label for="takeHome">Take-home pay / month</label><input type="number" id="takeHome" min="0" step="100"><small>After tax</small></div>
+        <div class="f"><label for="comfortPct">Comfort target %</label><input type="number" id="comfortPct" min="5" max="60" step="1"><small>Of take-home on housing</small></div>
+      </div>
+    </details>
+  </form>
+
+  <div class="det">
+    <section class="panel card" id="affordCard">
+      <h2>What you qualify for</h2>
+      <p id="affordNote">Based on household income, other debts and the cash you have for a down payment.</p>
+      <div id="afford"></div>
+      <div id="comfortOut"></div>
+    </section>
+    <section class="panel card">
+      <h2>Cash to close &amp; true monthly cost</h2>
+      <p>What you need on closing day, and what owning costs each month beyond the mortgage payment.</p>
+      <div class="two" style="gap:24px">
+        <div class="legend" id="closeList"></div>
+        <div class="legend" id="trueList"></div>
+      </div>
+    </section>
+    <section class="panel card">
+      <h2>Balance over time</h2>
+      <p id="balNote">Remaining balance at each year end.</p>
+      <div class="chart" id="balChart"></div>
+    </section>
+    <section class="panel card">
+      <h2>Where each year's payments go</h2>
+      <p>Principal, interest and mortgage insurance paid per year, with the rate in effect.</p>
+      <div class="chart" id="barChart"></div>
+      <details class="sched"><summary>Year-by-year schedule</summary>
+        <div class="tblwrap"><table id="schedule"></table></div>
+      </details>
+    </section>
+    <div class="two">
+      <section class="panel card">
+        <h2>Down payment options</h2>
+        <p>Same home, rate and term.</p>
+        <div class="tblwrap"><table id="dpTable"></table></div>
+      </section>
+      <section class="panel card">
+        <h2 id="amTitle">Amortization options</h2>
+        <p>Same home and down payment.</p>
+        <div class="tblwrap"><table id="amTable"></table></div>
+      </section>
+    </div>
+    <section class="panel card">
+      <h2>Compare two offers</h2>
+      <p id="offIntro">Same mortgage amount and amortization. Net cost = interest paid + fees − cash back over the period you expect to keep the mortgage.</p>
+      <div class="offers">
+        <fieldset><legend>Offer A</legend>
+          <div class="f"><label for="offARate">Rate %</label><input type="number" id="offARate" step="0.01"></div>
+          <div class="f"><label for="offAFees" class="lblFees">Fees</label><input type="number" id="offAFees" min="0" step="100"></div>
+          <div class="f"><label for="offACash" class="lblCash">Cash back</label><input type="number" id="offACash" min="0" step="100"></div>
+        </fieldset>
+        <fieldset><legend>Offer B</legend>
+          <div class="f"><label for="offBRate">Rate %</label><input type="number" id="offBRate" step="0.01"></div>
+          <div class="f"><label for="offBFees" class="lblFees">Fees</label><input type="number" id="offBFees" min="0" step="100"></div>
+          <div class="f"><label for="offBCash" class="lblCash">Cash back</label><input type="number" id="offBCash" min="0" step="100"></div>
+        </fieldset>
+        <div class="f"><label for="offHorizon">Compare over (years)</label><input type="number" id="offHorizon" min="1" max="30" step="1"></div>
+      </div>
+      <div id="offOut"></div>
+      <div class="chart" id="offChart" style="min-height:180px"></div>
+    </section>
+    <section class="panel card" data-c="CA">
+      <h2>Cost to break your mortgage early</h2>
+      <p>Selling, refinancing or switching before the term ends triggers a prepayment penalty: 3 months' interest, or for fixed rates the larger of that and the interest rate differential (IRD).</p>
+      <div class="fields" style="padding:0;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr))">
+        <div class="f"><label for="penMonths">Break after (months)</label><input type="number" id="penMonths" min="1" step="1"></div>
+        <div class="f" data-c="CA" data-when="fixedCA"><label for="penPosted">Lender's posted rate for remaining term %</label><input type="number" id="penPosted" step="0.01"></div>
+        <div class="f" data-c="CA" data-when="fixedCA"><label for="penDisc">Discount you received %</label><input type="number" id="penDisc" step="0.05"><small>Posted rate at signing minus your rate. Set 0 for lenders that use their actual rates.</small></div>
+      </div>
+      <div id="penOut" style="margin-top:14px"></div>
+    </section>
+    <section class="panel card" data-c="US">
+      <h2>Conventional vs FHA vs VA</h2>
+      <p>Same home, down payment, rate and term under each program. Tap a row to switch to it.</p>
+      <div class="tblwrap"><table id="progTable"></table></div>
+    </section>
+    <section class="panel card">
+      <h2>Rules behind the numbers</h2>
+      <div class="notes" id="notes"></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<!-- Rent vs buy -->
+<div id="tab-rent" class="tool" role="tabpanel" aria-labelledby="t-rent" hidden>
+  <form class="panel form" onsubmit="return false">
+    <details class="grp" open><summary>Renting</summary><div class="fields">
+      <div class="f"><label for="rent">Monthly rent</label><input type="number" id="rent" min="0" step="50"></div>
+      <div class="f"><label for="rentGrowth">Rent increase %/yr</label><input type="number" id="rentGrowth" step="0.25"></div>
+      <div class="f"><label for="rentIns">Tenant insurance / mo</label><input type="number" id="rentIns" min="0" step="5"></div>
+      <div class="f"><label for="invest">Investment return %/yr</label><input type="number" id="invest" step="0.25"><small>After tax</small></div>
+    </div></details>
+    <details class="grp" open><summary>Owning</summary><div class="fields">
+      <div class="f"><label for="appr">Home price growth %/yr</label><input type="number" id="appr" step="0.25"></div>
+      <div class="f"><label for="sellPct">Selling costs %</label><input type="number" id="sellPct" min="0" step="0.5"><small>Agent, legal, discharge</small></div>
+      <div class="f"><label for="costInfl">Tax &amp; fee increase %/yr</label><input type="number" id="costInfl" step="0.25"></div>
+      <div class="f"><label for="rbYears">Years you'd stay</label><input type="number" id="rbYears" min="1" max="40" step="1"></div>
+      <p class="f full lbl" style="margin:0;color:var(--muted);font-size:13px" id="rbFrom"></p>
+    </div></details>
+  </form>
+  <div class="det">
+    <section class="panel card"><h2 id="rbVerdict">Rent vs buy</h2><p id="rbSub"></p><div class="aff" id="rbTiles"></div></section>
+    <section class="panel card"><h2>Net worth over time</h2><p>Buyer: home value after selling costs, minus the mortgage, plus anything invested. Renter: the down payment and closing cash invested, plus whatever renting saves each year.</p>
+      <div class="chart" id="rbChart"></div>
+      <details class="sched"><summary>Year-by-year</summary><div class="tblwrap"><table id="rbTable"></table></div></details>
+    </section>
+    <section class="panel card"><h2>Assumptions to keep in mind</h2><div class="notes" id="rbNotes"></div></section>
+  </div>
+</div>
+
+<!-- Refinance -->
+<div id="tab-refi" class="tool" role="tabpanel" aria-labelledby="t-refi" hidden>
+  <form class="panel form" onsubmit="return false">
+    <details class="grp" open><summary>Current mortgage</summary><div class="fields">
+      <div class="f full"><label for="refBal">Balance owing</label><input type="number" id="refBal" min="0" step="1000"></div>
+      <div class="f"><label for="refRate">Current rate %</label><input type="number" id="refRate" step="0.01"></div>
+      <div class="f"><label for="refRemain">Years left</label><input type="number" id="refRemain" min="1" max="40" step="1"></div>
+      <button type="button" class="linkbtn f full" id="refFill">Fill from the Mortgage tab</button>
+    </div></details>
+    <details class="grp" open><summary>New mortgage</summary><div class="fields">
+      <div class="f"><label for="refNewRate">New rate %</label><input type="number" id="refNewRate" step="0.01"></div>
+      <div class="f"><label for="refNewTerm" id="refNewTermLbl">New term (years)</label><input type="number" id="refNewTerm" min="1" max="40" step="1"></div>
+      <div class="f" data-c="CA"><label for="refPenalty">Prepayment penalty</label><input type="number" id="refPenalty" min="0" step="100"><small>See the Mortgage tab estimate</small></div>
+      <div class="f"><label for="refCosts" id="refCostsLbl">Closing costs</label><input type="number" id="refCosts" min="0" step="100"></div>
+      <label class="chk f full"><input type="checkbox" id="refRoll"> Add the costs to the new loan</label>
+    </div></details>
+  </form>
+  <div class="det">
+    <section class="panel card"><h2 id="rfVerdict">Refinance</h2><p id="rfSub"></p><div class="aff" id="rfTiles"></div><div class="msgs" id="rfMsgs"></div></section>
+    <section class="panel card"><h2>Cumulative savings</h2><p>Interest saved minus refinancing costs. Where the line crosses zero is your break-even.</p><div class="chart" id="rfChart"></div></section>
+  </div>
+</div>
+
+<!-- Solve -->
+<div id="tab-solve" class="tool" role="tabpanel" aria-labelledby="t-solve" hidden>
+  <form class="panel form" onsubmit="return false">
+    <details class="grp" open><summary>What to solve for</summary><div class="fields">
+      <div class="f full"><label for="slvMode">Solve for</label>
+        <select id="slvMode"><option value="rate">Rate that hits my payment</option><option value="term">Years needed for my payment</option><option value="loan">Biggest loan for my payment</option><option value="payment">Payment</option></select></div>
+      <div class="f full" data-s="loan"><label for="slvLoan">Loan amount</label><input type="number" id="slvLoan" min="0" step="1000"></div>
+      <div class="f" data-s="pay"><label for="slvPay">Target monthly payment</label><input type="number" id="slvPay" min="0" step="50"></div>
+      <div class="f" data-s="rate"><label for="slvRate">Rate %</label><input type="number" id="slvRate" step="0.01"></div>
+      <div class="f" data-s="years"><label for="slvYears" id="slvYearsLbl">Years</label><input type="number" id="slvYears" min="1" max="40" step="1"></div>
+      <button type="button" class="linkbtn f full" id="slvFill">Fill from the Mortgage tab</button>
+    </div></details>
+  </form>
+  <div class="det">
+    <section class="panel card"><div class="eyebrow" id="slvLabel">Answer</div><div class="big" id="slvBig">—</div><p id="slvSub" style="margin:6px 0 0;color:var(--muted)"></p></section>
+    <section class="panel card"><h2>Monthly payment by rate and length</h2><p id="slvGridNote"></p><div class="tblwrap"><table id="slvGrid"></table></div></section>
+  </div>
+</div>
+<footer>Estimates only, not a loan offer or financial advice. Example rates are placeholders; enter quotes from your lender. Insurance premiums, PMI and loan limits change; confirm with a lender or broker.</footer>
+</div>
+
+<script id="engine">
+/* ---------- Pure calculation engine (no DOM) ---------- */
+const Engine = (() => {
+  const pmt = (P, i, N) => (N <= 0 ? P : i === 0 ? P / N : (P * i) / (1 - Math.pow(1 + i, -N)));
+  // Periodic rate for n payments/yr from a nominal annual % compounded semi-annually or monthly
+  const perRate = (r, comp, n) => comp === "semi" ? Math.pow(1 + r / 200, 2 / n) - 1 : Math.pow(1 + r / 1200, 12 / n) - 1;
+
+  const CA = {
+    insuredCap: 1500000,
+    minDown(p) { if (p >= 1500000) return p * 0.2; if (p <= 500000) return p * 0.05; return 25000 + (p - 500000) * 0.1; },
+    premiumRate(ltv) { // CMHC homeowner premiums, % of loan
+      if (ltv <= 0.65) return 0.006; if (ltv <= 0.75) return 0.017; if (ltv <= 0.8) return 0.024;
+      if (ltv <= 0.85) return 0.028; if (ltv <= 0.9) return 0.031; return 0.04;
+    },
+    pst: { ON: 0.08, QC: 0.09, MB: 0.07, SK: 0.06 },
+    qualRate: r => Math.max(r + 2, 5.25),
+    FREQ: { m: { n: 12 }, sm: { n: 24 }, bw: { n: 26 }, abw: { n: 26, accel: true }, w: { n: 52 }, aw: { n: 52, accel: true } },
+  };
+  const US = {
+    conforming: 832750, highCost: 1249125, fhaFloor: 541287,
+    pmiRate(ltv) { if (ltv > 0.95) return 0.85; if (ltv > 0.9) return 0.6; if (ltv > 0.85) return 0.4; return 0.25; }, // % / yr, ~740 credit
+    mip(base, ltv, termY) { // FHA annual MIP (case numbers after 2023-03-20)
+      const big = base > 726200;
+      if (termY > 15) return big ? (ltv > 0.95 ? 0.0075 : 0.007) : (ltv > 0.95 ? 0.0055 : 0.005);
+      if (!big) return ltv > 0.9 ? 0.004 : 0.0015;
+      return ltv > 0.9 ? 0.0065 : ltv > 0.78 ? 0.004 : 0.0015;
+    },
+    vaFee(dpPct, use) {
+      if (use === "exempt") return 0;
+      if (dpPct >= 0.1) return 0.0125; if (dpPct >= 0.05) return 0.015;
+      return use === "sub" ? 0.033 : 0.0215;
+    },
+    ARMS: { "5/6": [5, 6, 2, 1, 5], "7/6": [7, 6, 5, 1, 5], "10/6": [10, 6, 5, 1, 5], "5/1": [5, 12, 2, 2, 5], "7/1": [7, 12, 5, 2, 5], "10/1": [10, 12, 5, 2, 5] },
+  };
+
+  function armPath(o) {
+    const rates = []; let cur = o.initRate, first = true;
+    const start = o.initYears * 12;
+    for (let m = 0; m < 50 * 12; m++) {
+      if (m >= start && (m - start) % o.adjMonths === 0) {
+        let target = Math.round((o.index + o.margin) * 8) / 8; // nearest 1/8%
+        const cap = first ? o.capI : o.capP; first = false;
+        target = Math.min(target, cur + cap, o.initRate + o.capL);
+        target = Math.max(target, cur - cap, o.margin);
+        cur = target;
+      }
+      rates.push(cur);
+    }
+    const fn = t => rates[Math.min(rates.length - 1, Math.floor(t * 12 + 1e-9))];
+    fn.firstReset = rates[start]; return fn;
+  }
+
+  function simulate(o) {
+    const n = o.n, per = r => perRate(r, o.comp, n), per12 = r => perRate(r, o.comp, 12);
+    const maxK = Math.ceil((o.maxYears || 45) * n);
+    const resets = new Set((o.resetAt || []).map(y => Math.round(y * n)));
+    let bal = o.principal, k = 0, rate = null, pay = 0, ysBal = bal;
+    let totI = 0, totMI = 0, totPaid = 0, trigger = false, maxPay = 0, first = null, termStats = null, miEnd = null, hadMI = false;
+    const years = [], cum = [], balArr = []; let yr = null;
+    const calcPay = (r, t) => {
+      const left = Math.max(o.amortYears - t, 1 / n);
+      return o.accel ? pmt(bal, per12(r), left * 12) * 13 / n : pmt(bal, per(r), left * n);
+    };
+    while (bal > 0.005 && k < maxK) {
+      const t = k / n, r = o.rateAt(t);
+      if (rate === null || resets.has(k) || (r !== rate && o.varMode !== "fixedPayment")) pay = calcPay(r, t);
+      rate = r;
+      if (k % n === 0) { ysBal = bal; yr = { year: k / n + 1, rate: r, interest: 0, principal: 0, mi: 0, paid: 0, balance: bal }; years.push(yr); }
+      const interest = bal * per(r);
+      let prin = pay - interest;
+      if (prin < 0) trigger = true;
+      prin += o.extra || 0;
+      if (prin > bal) prin = bal;
+      const mi = o.mi ? o.mi(k, bal, t, ysBal) : 0;
+      if (mi > 0) hadMI = true; else if (hadMI && miEnd === null) miEnd = t;
+      bal -= prin;
+      let lump = 0;
+      if ((k + 1) % n === 0 && o.lump > 0 && bal > 0.005) { lump = Math.min(o.lump, bal); bal -= lump; }
+      if (!first) first = { pay, interest, mi, rate: r };
+      maxPay = Math.max(maxPay, pay);
+      yr.interest += interest; yr.principal += prin + lump; yr.mi += mi; yr.paid += interest + prin + lump; yr.balance = bal;
+      totI += interest; totMI += mi; totPaid += interest + prin + lump;
+      k++;
+      if (o.record) { cum.push(totI); balArr.push(bal); }
+      if (o.termYears && k === Math.round(o.termYears * n)) termStats = { balance: bal, interest: totI, principal: o.principal - bal };
+    }
+    if (o.termYears && !termStats) termStats = { balance: 0, interest: totI, principal: o.principal };
+    if (hadMI && miEnd === null && bal <= 0.005) miEnd = k / n;
+    return { years, cum, bal: balArr, totI, totMI, totPaid, periods: k, payoffYears: k / n, trigger, maxPay, first, termStats, miEnd, unpaid: bal > 0.005 ? bal : 0 };
+  }
+
+  /* ---------- Canadian land transfer taxes (2026) ---------- */
+  const tiers = (v, b) => { let t = 0, prev = 0; for (const [cap, r] of b) { if (v > prev) t += (Math.min(v, cap) - prev) * r; prev = cap; } return t; };
+  const I = Infinity;
+  const LTT_TABLES = {
+    ON: [[55000, .005], [250000, .01], [400000, .015], [2e6, .02], [I, .025]],
+    TOR: [[55000, .005], [250000, .01], [400000, .015], [2e6, .02], [3e6, .025], [4e6, .035], [5e6, .045], [1e7, .055], [2e7, .065], [I, .075]],
+    BC: [[2e5, .01], [2e6, .02], [3e6, .03], [I, .05]],
+    QC: [[58900, .005], [294600, .01], [500400, .015], [I, .02]],
+    MTL: [[58900, .005], [294600, .01], [500400, .015], [1057600, .025], [2057600, .03], [I, .035]],
+    MB: [[30000, 0], [90000, .005], [150000, .01], [200000, .015], [I, .02]],
+  };
+  function landTransfer(prov, p, loan, o) {
+    const L = [], ftb = !!o.firstTime, T = LTT_TABLES;
+    if (prov === "ON") {
+      const t = tiers(p, T.ON); L.push(["Ontario land transfer tax", t]);
+      if (ftb) L.push(["Ontario first-time buyer refund", -Math.min(t, 4000)]);
+      if (o.bigCity) { const m = tiers(p, T.TOR); L.push(["Toronto municipal land transfer tax", m]); if (ftb) L.push(["Toronto first-time buyer rebate", -Math.min(m, 4475)]); }
+    } else if (prov === "BC") {
+      const t = tiers(p, T.BC); L.push(["BC property transfer tax", t]);
+      let ex = 0, lbl = "First-time buyer exemption";
+      if (ftb) { if (p <= 835000) ex = Math.min(t, 8000); else if (p < 860000) ex = Math.min(t, 8000) * (860000 - p) / 25000; }
+      if (o.newBuild) { const e2 = p <= 1100000 ? t : p < 1150000 ? t * (1150000 - p) / 50000 : 0; if (e2 > ex) { ex = e2; lbl = "Newly built home exemption"; } }
+      if (ex > 0) L.push([lbl, -ex]);
+    } else if (prov === "QC") L.push([o.bigCity ? "Montreal transfer duties (welcome tax)" : "Quebec transfer duties (welcome tax)", tiers(p, o.bigCity ? T.MTL : T.QC)]);
+    else if (prov === "MB") L.push(["Manitoba land transfer tax", tiers(p, T.MB)]);
+    else if (prov === "NB") L.push(["NB real property transfer tax (1%)", p * 0.01]);
+    else if (prov === "NS") L.push(["NS deed transfer tax (≈1.5%, varies by municipality)", p * 0.015]);
+    else if (prov === "PE") { const t = p * 0.01; L.push(["PEI real property transfer tax", t]); if (ftb) L.push(["First-time buyer exemption", -t]); }
+    else if (prov === "NL") L.push(["NL deed & mortgage registration", 200 + Math.max(0, p - 500) * 0.004 + Math.max(0, loan - 500) * 0.004]);
+    else if (prov === "AB") L.push(["Alberta title & mortgage registration", 100 + Math.ceil(p / 5000) * 5 + Math.ceil(loan / 5000) * 5]);
+    else if (prov === "SK") L.push(["Saskatchewan title transfer fee", Math.max(0, p - 6300) * 0.003]);
+    else L.push(["Territorial land titles fees (small, varies)", 0]);
+    return { lines: L, total: L.reduce((a, l) => a + l[1], 0) };
+  }
+
+  const money = (v, c) => new Intl.NumberFormat(c === "CA" ? "en-CA" : "en-US", { style: "currency", currency: c === "CA" ? "CAD" : "USD", maximumFractionDigits: 0 }).format(v);
+
+  function computeCA(s) {
+    const price = +s.price || 0, down = Math.min(+s.down || 0, price), base = price - down, msgs = [];
+    const minDown = CA.minDown(price), dp = price ? down / price : 0, ltv = price ? base / price : 0;
+    const amort = +s.amort, term = +s.term, rate = +s.rate || 0;
+    if (down + 0.5 < minDown) msgs.push(["err", price >= CA.insuredCap
+      ? `Homes priced at ${money(CA.insuredCap, "CA")} or more need 20% down (${money(minDown, "CA")}). Mortgage insurance isn't available.`
+      : `Minimum down payment is ${money(minDown, "CA")}: 5% of the first $500,000${price > 500000 ? " plus 10% of the rest" : ""}.`]);
+    const insured = dp < 0.2 && price < CA.insuredCap;
+    let premRate = 0, prem = 0, pst = 0;
+    if (insured) {
+      premRate = CA.premiumRate(ltv) + (amort > 25 ? 0.002 : 0);
+      prem = base * premRate; pst = prem * (CA.pst[s.province] || 0);
+      if (amort > 25 && !(s.firstTime || s.newBuild)) msgs.push(["err", "Insured mortgages max out at 25 years unless you're a first-time buyer or buying a newly built home."]);
+    }
+    const f = CA.FREQ[s.freq] || CA.FREQ.m;
+    const comp = s.comp === "auto" ? (s.rateType === "fixed" ? "semi" : "monthly") : s.comp;
+    const renew = s.renewRate === "" || s.renewRate == null ? rate : +s.renewRate;
+    const variable = s.rateType === "variable";
+    const shift = variable ? +s.shift || 0 : 0, shiftAfter = +s.shiftAfter || 0;
+    const rateAt = t => (t >= term ? renew : variable && t * 12 >= shiftAfter ? Math.max(0, rate + shift) : rate);
+    const loan = base + prem;
+    const varMode = variable ? s.varMode : "adjust";
+    const opts = { principal: loan, n: f.n, accel: !!f.accel, comp, amortYears: amort, rateAt, varMode, resetAt: [term], termYears: term, extra: +s.extra || 0, lump: +s.lump || 0 };
+    const sim = simulate(opts);
+    const noExtra = (opts.extra || opts.lump) ? simulate({ ...opts, extra: 0, lump: 0 }) : sim;
+    // Stress test (monthly, contract amortization)
+    const qRate = CA.qualRate(rate);
+    const qPay = pmt(loan, perRate(qRate, comp, 12), amort * 12);
+    const inc = (+s.income || 0) / 12;
+    let gds = null, tds = null;
+    if (inc > 0) {
+      const housing = qPay + (+s.tax || 0) / 12 + (+s.heat || 0) + 0.5 * (+s.hoa || 0);
+      gds = housing / inc; tds = (housing + (+s.debts || 0)) / inc;
+      if (gds > 0.39) msgs.push(["warn", `GDS at the stress-test rate is ${(gds * 100).toFixed(1)}%, above the 39% insured limit.`]);
+      if (tds > 0.44) msgs.push(["warn", `TDS at the stress-test rate is ${(tds * 100).toFixed(1)}%, above the 44% insured limit.`]);
+    }
+    // Trigger rate for fixed-payment variable
+    let triggerRate = null;
+    if (variable && varMode === "fixedPayment" && loan > 0) {
+      const i = sim.first.pay / loan;
+      triggerRate = comp === "semi" ? 200 * (Math.pow(1 + i, f.n / 2) - 1) : 1200 * (Math.pow(1 + i, f.n / 12) - 1);
+      if (sim.trigger) msgs.push(["err", `The rate passes your trigger rate (${triggerRate.toFixed(2)}%): payments no longer cover interest and the balance grows. Lenders will ask for a higher payment or a lump sum.`]);
+    }
+    if (sim.unpaid > 0) msgs.push(["warn", `At these settings the loan is not paid off within 45 years (${money(sim.unpaid, "CA")} left).`]);
+    if (insured && pst > 0) msgs.push(["info", `${s.province} charges ${(CA.pst[s.province] * 100).toFixed(0)}% sales tax on the premium: ${money(pst, "CA")} due in cash at closing (it can't be added to the mortgage).`]);
+    if (dp >= 0.2) msgs.push(["info", "20% or more down: no mortgage default insurance needed."]);
+    const ltt = landTransfer(s.province, price, loan, { firstTime: s.firstTime, newBuild: s.newBuild, bigCity: s.bigCity && (s.province === "ON" || s.province === "QC") });
+    const close = [["Down payment", down], ...ltt.lines, ...(pst > 0 ? [["Sales tax on insurance premium", pst]] : []), ["Legal, inspection, appraisal & title", +s.closingOther || 0]];
+    return { country: "CA", opts, close, cashToClose: close.reduce((a, l) => a + l[1], 0),
+      price, down, dp, base, ltv, loan, upfront: prem, upfrontRate: premRate, upfrontLabel: "Default insurance (CMHC)", pst, insured,
+      n: f.n, comp, rate, term, amort, sim, noExtra, qRate, qPay, gds, tds, triggerRate, minDown, msgs,
+      escrow: ((+s.tax || 0) + (+s.ins || 0)) / f.n + (+s.hoa || 0) * 12 / f.n };
+  }
+
+  function computeUS(s) {
+    const price = +s.price || 0, down = Math.min(+s.down || 0, price), base = price - down, msgs = [];
+    const dp = price ? down / price : 0, ltv = price ? base / price : 0, type = s.loanType;
+    const term = +s.termUS, rate = +s.rate || 0, limit = +s.limit || US.conforming;
+    const jumbo = type === "conv" && base > limit;
+    let minPct = type === "fha" ? 0.035 : type === "va" ? 0 : jumbo ? 0.1 : s.firstTime ? 0.03 : 0.05;
+    const minDown = price * minPct;
+    if (down + 0.5 < minDown) msgs.push(["err", `${type === "fha" ? "FHA" : jumbo ? "Jumbo loans" : "Conventional loans"} need at least ${(minPct * 100).toFixed(1).replace(".0", "")}% down (${money(minDown, "US")}).`]);
+    if (jumbo) msgs.push(["warn", `This loan is above the ${money(limit, "US")} conforming limit, so it's a jumbo loan. Lenders set their own rates and down-payment rules; PMI is not modeled.`]);
+    if (type === "fha" && base > (+s.fhaLimit || US.fhaFloor)) msgs.push(["err", `The loan exceeds your county's FHA limit of ${money(+s.fhaLimit || US.fhaFloor, "US")}.`]);
+    if (type === "va") msgs.push(["info", "VA loans have no down payment requirement or monthly mortgage insurance. With full entitlement there is no VA loan limit."]);
+    // Upfront fees
+    let upRate = 0, upLabel = "";
+    if (type === "fha") { upRate = 0.0175; upLabel = "FHA upfront MIP"; }
+    if (type === "va") { upRate = US.vaFee(dp, s.vaUse); upLabel = "VA funding fee"; }
+    const upfront = base * upRate, financed = s.finance ? upfront : 0, loan = base + financed;
+    // Monthly mortgage insurance
+    const n = s.freqUS === "bw" ? 26 : 12, accel = n === 26;
+    let mi = null, miRate = 0, miYears = 0;
+    if (type === "conv" && !jumbo && ltv > 0.8) {
+      miRate = s.pmi === "" || s.pmi == null ? US.pmiRate(ltv) : +s.pmi;
+      mi = (k, bal) => (bal > 0.78 * price ? (miRate / 100) * base / n : 0);
+    }
+    if (type === "fha") {
+      miRate = US.mip(base, ltv, term) * 100; miYears = ltv > 0.9 ? Infinity : 11;
+      mi = (k, bal, t, ys) => (t < miYears ? (miRate / 100) * ys / n : 0);
+    }
+    // Rate path
+    let rateAt = () => rate, arm = null, worst = null;
+    if (s.rateTypeUS === "arm") {
+      const p = US.ARMS[s.arm] || US.ARMS["5/6"];
+      const cfg = { initRate: rate, initYears: p[0], adjMonths: p[1], capI: +s.capI, capP: +s.capP, capL: +s.capL, margin: +s.margin || 0, index: +s.index || 0 };
+      rateAt = armPath(cfg);
+      arm = { initYears: p[0], adjMonths: p[1], firstReset: rateAt.firstReset, ceiling: rate + cfg.capL };
+      worst = simulate({ principal: loan, n, accel, comp: "monthly", amortYears: term, rateAt: armPath({ ...cfg, index: 99 }), varMode: "adjust" });
+      if (term <= arm.initYears) msgs.push(["warn", "The fixed period is as long as the loan term, so this ARM never adjusts."]);
+    }
+    const opts = { principal: loan, n, accel, comp: "monthly", amortYears: term, rateAt, varMode: "adjust", extra: +s.extra || 0, lump: +s.lump || 0, mi };
+    const sim = simulate(opts);
+    const noExtra = (opts.extra || opts.lump) ? simulate({ ...opts, extra: 0, lump: 0 }) : sim;
+    if (arm) { arm.resetPay = noExtra.maxPay; arm.worstPay = worst.maxPay; }
+    // DTI
+    const inc = (+s.income || 0) / 12;
+    let front = null, back = null;
+    const monthlyHousing = (sim.first.pay + sim.first.mi) * n / 12 + ((+s.tax || 0) + (+s.ins || 0)) / 12 + (+s.hoa || 0);
+    if (inc > 0) {
+      front = monthlyHousing / inc; back = (monthlyHousing + (+s.debts || 0)) / inc;
+      const lim = type === "fha" ? [0.31, 0.43] : type === "va" ? [null, 0.41] : [0.28, 0.36];
+      if (lim[0] && front > lim[0]) msgs.push(["warn", `Housing ratio is ${(front * 100).toFixed(1)}%, above the ${lim[0] * 100}% guideline. Automated underwriting can approve higher with strong credit or reserves.`]);
+      if (back > lim[1]) msgs.push(["warn", `Total debt-to-income is ${(back * 100).toFixed(1)}%, above the ${Math.round(lim[1] * 100)}% guideline.`]);
+    }
+    if (mi && type === "conv") msgs.push(["info", `PMI (${miRate.toFixed(2)}%/yr) ends automatically when the balance reaches 78% of the original value; you can ask to cancel at 80%.`]);
+    if (type === "fha") msgs.push(["info", miYears === Infinity ? "With under 10% down, FHA annual MIP lasts for the life of the loan. Refinancing to conventional is the usual way out." : "With 10%+ down, FHA annual MIP ends after 11 years."]);
+    const close = [["Down payment", down], ["Lender, title & escrow costs (est.)", base * (+s.closingPct || 0) / 100], ...(upfront && !s.finance ? [[upLabel + " (paid at closing)", upfront]] : [])];
+    return { country: "US", opts, close, cashToClose: close.reduce((a, l) => a + l[1], 0),
+      price, down, dp, base, ltv, loan, upfront, upfrontRate: upRate, upfrontLabel: upLabel, financed, jumbo, type,
+      n, rate, term, sim, noExtra, miRate, miYears, arm, front, back, minDown, msgs, monthlyHousing,
+      escrow: ((+s.tax || 0) + (+s.ins || 0)) / n + (+s.hoa || 0) * 12 / n };
+  }
+
+  /* ---------- Affordability: highest price that passes the ratio tests with the cash down entered ---------- */
+  function searchPrice(D, hi, test) {
+    let best = null;
+    for (let p = Math.max(1000, Math.ceil(D / 1000) * 1000); p <= hi; p += 1000) { const t = test(p); if (t.ok) best = { p, ...t }; }
+    if (!best) return null;
+    const next = test(best.p + 1000); best.limit = next.why || "ratio"; return best;
+  }
+
+  function affordCA(s) {
+    const inc = (+s.income || 0) / 12; if (!inc) return null;
+    const rate = +s.rate || 0, q = CA.qualRate(rate), amort = +s.amort;
+    const comp = s.comp === "auto" ? (s.rateType === "fixed" ? "semi" : "monthly") : s.comp;
+    const i = perRate(q, comp, 12), ann = (1 - Math.pow(1 + i, -amort * 12)) / i;
+    const taxRate = +s.price > 0 ? (+s.tax || 0) / +s.price : 0;
+    const fixed = (+s.heat || 0) + 0.5 * (+s.hoa || 0), debts = +s.debts || 0, D = +s.down || 0;
+    const gdsRoom = 0.39 * inc - fixed, tdsRoom = 0.44 * inc - debts - fixed;
+    const test = p => {
+      if (D + 0.5 < CA.minDown(p)) return { ok: false, why: "down" };
+      const base = p - D, dp = D / p; let prem = 0;
+      if (dp < 0.2) { if (amort > 25 && !(s.firstTime || s.newBuild)) return { ok: false, why: "amort" }; prem = CA.premiumRate(base / p) + (amort > 25 ? 0.002 : 0); }
+      const loan = base * (1 + prem), pi = loan / ann, tax = taxRate * p / 12;
+      if (pi + tax > gdsRoom) return { ok: false, why: gdsRoom <= tdsRoom ? "GDS" : "TDS" };
+      if (pi + tax > tdsRoom) return { ok: false, why: "TDS" };
+      return { ok: true, loan, pi };
+    };
+    const best = searchPrice(D, D * 20 + 0.44 * inc * ann * 1.3 + 2000, test);
+    // Income needed for the home currently entered
+    const cur = computeCA(s);
+    const housing = cur.qPay + (+s.tax || 0) / 12 + fixed;
+    const incomeNeeded = Math.max(housing / 0.39, (housing + debts) / 0.44) * 12;
+    return { qRate: q, best, incomeNeeded, limits: "GDS 39% · TDS 44%" };
+  }
+
+  function affordUS(s) {
+    const inc = (+s.income || 0) / 12; if (!inc) return null;
+    const type = s.loanType, rate = +s.rate || 0, term = +s.termUS, D = +s.down || 0;
+    let q = rate;
+    if (s.rateTypeUS === "arm") { const p = US.ARMS[s.arm] || US.ARMS["5/6"]; if (p[0] <= 5) q = Math.max(rate + 2, (+s.index || 0) + (+s.margin || 0)); }
+    const i = q / 1200, ann = i ? (1 - Math.pow(1 + i, -term * 12)) / i : term * 12;
+    const taxRate = +s.price > 0 ? (+s.tax || 0) / +s.price : 0;
+    const other = (+s.ins || 0) / 12 + (+s.hoa || 0), debts = +s.debts || 0;
+    const lim = type === "fha" ? [0.31, 0.43] : type === "va" ? [null, 0.41] : [0.28, 0.36];
+    const climit = +s.limit || US.conforming, fhaLimit = +s.fhaLimit || US.fhaFloor;
+    const housingFor = p => {
+      const base = p - D, ltv = base / p, dp = D / p;
+      const fee = type === "fha" ? base * 0.0175 : type === "va" ? base * US.vaFee(dp, s.vaUse) : 0;
+      const loan = base + (s.finance ? fee : 0);
+      let mi = 0;
+      if (type === "conv" && base <= climit && ltv > 0.8) mi = (s.pmi === "" || s.pmi == null ? US.pmiRate(ltv) : +s.pmi) / 100 * base / 12;
+      if (type === "fha") mi = US.mip(base, ltv, term) * loan / 12;
+      return { loan, h: loan / ann + mi + taxRate * p / 12 + other };
+    };
+    const test = p => {
+      const base = p - D, jumbo = type === "conv" && base > climit;
+      const minPct = type === "fha" ? 0.035 : type === "va" ? 0 : jumbo ? 0.1 : s.firstTime ? 0.03 : 0.05;
+      if (base > 0 && D + 0.5 < p * minPct) return { ok: false, why: "down" };
+      if (type === "fha" && base > fhaLimit) return { ok: false, why: "fhaLimit" };
+      const { loan, h } = housingFor(p);
+      if (lim[0] && h > lim[0] * inc) return { ok: false, why: "front" };
+      if (h + debts > lim[1] * inc) return { ok: false, why: "back" };
+      return { ok: true, loan, pi: loan / ann };
+    };
+    const best = searchPrice(D, D * 34 + lim[1] * inc * ann * 1.3 + 2000, test);
+    const cur = housingFor(+s.price || 0).h;
+    const incomeNeeded = Math.max(lim[0] ? cur / lim[0] : 0, (cur + debts) / lim[1]) * 12;
+    return { qRate: q, best, incomeNeeded, limits: lim[0] ? `Housing ${lim[0] * 100}% · Total ${lim[1] * 100}%` : `Total ${lim[1] * 100}%` };
+  }
+
+  /* ---------- Comfortable budget: housing cost within a share of take-home pay, at the real rate ---------- */
+  function comfort(c, s) {
+    const th = +s.takeHome || 0; if (!th) return null;
+    const room = th * (+s.comfortPct || 30) / 100, D = +s.down || 0, rate = +s.rate || 0;
+    const taxRate = +s.price > 0 ? (+s.tax || 0) / +s.price : 0, fixed = (+s.ins || 0) / 12 + (+s.hoa || 0);
+    let test, ann, hiMult;
+    if (c === "CA") {
+      const amort = +s.amort, comp = s.comp === "auto" ? (s.rateType === "fixed" ? "semi" : "monthly") : s.comp;
+      const i = perRate(rate, comp, 12); ann = i ? (1 - Math.pow(1 + i, -amort * 12)) / i : amort * 12; hiMult = 20;
+      test = p => {
+        if (D + 0.5 < CA.minDown(p)) return { ok: false, why: "down" };
+        const base = p - D; let prem = 0;
+        if (D / p < 0.2) { if (amort > 25 && !(s.firstTime || s.newBuild)) return { ok: false, why: "amort" }; prem = CA.premiumRate(base / p) + (amort > 25 ? 0.002 : 0); }
+        const loan = base * (1 + prem), h = loan / ann + taxRate * p / 12 + fixed;
+        return h <= room ? { ok: true, loan, pi: h } : { ok: false, why: "comfort" };
+      };
+    } else {
+      const term = +s.termUS, type = s.loanType, i = rate / 1200; ann = i ? (1 - Math.pow(1 + i, -term * 12)) / i : term * 12; hiMult = 34;
+      const climit = +s.limit || US.conforming, fhaLimit = +s.fhaLimit || US.fhaFloor;
+      test = p => {
+        const base = p - D, ltv = base / p, dp = D / p, jumbo = type === "conv" && base > climit;
+        const minPct = type === "fha" ? 0.035 : type === "va" ? 0 : jumbo ? 0.1 : s.firstTime ? 0.03 : 0.05;
+        if (base > 0 && D + 0.5 < p * minPct) return { ok: false, why: "down" };
+        if (type === "fha" && base > fhaLimit) return { ok: false, why: "fhaLimit" };
+        const fee = type === "fha" ? base * 0.0175 : type === "va" ? base * US.vaFee(dp, s.vaUse) : 0, loan = base + (s.finance ? fee : 0);
+        let mi = 0;
+        if (type === "conv" && !jumbo && ltv > 0.8) mi = (s.pmi === "" || s.pmi == null ? US.pmiRate(ltv) : +s.pmi) / 100 * base / 12;
+        if (type === "fha") mi = US.mip(base, ltv, term) * loan / 12;
+        const h = loan / ann + mi + taxRate * p / 12 + fixed;
+        return h <= room ? { ok: true, loan, pi: h } : { ok: false, why: "comfort" };
+      };
+    }
+    return { room, best: searchPrice(D, D * hiMult + room * ann * 1.3 + 2000, test) };
+  }
+
+  /* ---------- Two offers on the same mortgage, compared over a holding period ---------- */
+  function compareOffers(c, s) {
+    const r = c === "CA" ? computeCA(s) : computeUS(s), h = Math.max(1, +s.offHorizon || 5);
+    const base = { ...r.opts, extra: 0, lump: 0, mi: null, record: true, maxYears: h, resetAt: [], termYears: 0, varMode: "adjust" };
+    const run = (rate, fees, cash) => {
+      const sim = simulate({ ...base, rateAt: () => rate });
+      const K = sim.cum.length;
+      return { rate, pay: sim.first ? sim.first.pay : 0, interest: sim.cum[K - 1] || 0, fees, cash, balance: sim.bal[K - 1] || 0,
+        total: (sim.cum[K - 1] || 0) + fees - cash, cost: sim.cum.map(ci => ci + fees - cash) };
+    };
+    const A = run(+s.offARate || 0, +s.offAFees || 0, +s.offACash || 0), B = run(+s.offBRate || 0, +s.offBFees || 0, +s.offBCash || 0);
+    let breakEven = null;
+    const len = Math.min(A.cost.length, B.cost.length), sign0 = Math.sign(A.cost[0] - B.cost[0]);
+    for (let k = 1; k < len; k++) if (Math.sign(A.cost[k] - B.cost[k]) !== sign0 && sign0 !== 0) { breakEven = (k + 1) / r.n; break; }
+    return { A, B, n: r.n, horizon: h, breakEven, winner: A.total <= B.total ? "A" : "B", diff: Math.abs(A.total - B.total) };
+  }
+
+  /* ---------- Canada: cost to break a closed mortgage early ---------- */
+  function penaltyCA(s) {
+    const r = computeCA(s), m = Math.round(+s.penMonths || 0);
+    if (m <= 0 || m >= r.term * 12) return { invalid: true, term: r.term };
+    const sim = simulate({ ...r.opts, record: true, maxYears: m / 12 });
+    const bal = sim.bal[sim.bal.length - 1] || 0, rate = r.opts.rateAt(m / 12);
+    const threeMonths = bal * rate / 100 / 4, remainingYears = r.term - m / 12;
+    let ird = null, cmpRate = null;
+    if (s.rateType === "fixed") { cmpRate = Math.max(0, (+s.penPosted || 0) - (+s.penDisc || 0)); ird = bal * Math.max(0, rate - cmpRate) / 100 * remainingYears; }
+    const penalty = Math.max(threeMonths, ird || 0);
+    return { bal, rate, threeMonths, ird, cmpRate, remainingYears, penalty, method: ird != null && ird > threeMonths ? "IRD" : "3 months' interest" };
+  }
+
+  const caComp = s => (s.comp === "auto" || !s.comp ? (s.rateType === "variable" ? "monthly" : "semi") : s.comp);
+
+  /* ---------- Rent vs buy: net worth of each path, investing whatever the cheaper path saves ---------- */
+  function rentVsBuy(c, s) {
+    const r = c === "CA" ? computeCA(s) : computeUS(s), Y = Math.max(1, Math.min(40, Math.round(+s.rbYears || 10)));
+    const a = (+s.appr || 0) / 100, g = (+s.rentGrowth || 0) / 100, inv = (+s.invest || 0) / 100, inf = (+s.costInfl || 0) / 100, sell = (+s.sellPct || 0) / 100;
+    const fixedYr = (+s.tax || 0) + (+s.ins || 0) + (+s.hoa || 0) * 12, half = Math.sqrt(1 + inv);
+    let buyPort = 0, rentPort = r.cashToClose, be = null, totOwn = 0, totRent = 0;
+    const rows = [];
+    for (let y = 1; y <= Y; y++) {
+      const yr = r.sim.years[y - 1], mort = yr ? yr.paid + yr.mi : 0, interest = yr ? yr.interest + yr.mi : 0;
+      const valPrev = r.price * Math.pow(1 + a, y - 1), carry = fixedYr * Math.pow(1 + inf, y - 1) + valPrev * (+s.maint || 0) / 100;
+      const own = mort + carry, rent = ((+s.rent || 0) + (+s.rentIns || 0)) * 12 * Math.pow(1 + g, y - 1), diff = own - rent;
+      rentPort = rentPort * (1 + inv) + Math.max(diff, 0) * half;
+      buyPort = buyPort * (1 + inv) + Math.max(-diff, 0) * half;
+      const value = r.price * Math.pow(1 + a, y), bal = yr ? yr.balance : 0;
+      const buyNW = value * (1 - sell) - bal + buyPort, rentNW = rentPort;
+      totOwn += interest + carry; totRent += rent;
+      rows.push({ y, own, rent, value, bal, buyNW, rentNW });
+      if (be === null && buyNW >= rentNW) be = y;
+    }
+    const last = rows[rows.length - 1];
+    return { rows, be, years: Y, upfront: r.cashToClose, start: { buy: r.price * (1 - sell) - r.loan, rent: r.cashToClose }, buyNW: last.buyNW, rentNW: last.rentNW, winner: last.buyNW >= last.rentNW ? "buy" : "rent",
+      diff: Math.abs(last.buyNW - last.rentNW), totOwn, totRent, price: r.price, firstOwn: rows[0].own / 12, firstRent: rows[0].rent / 12 };
+  }
+
+  /* ---------- Refinance break-even ---------- */
+  function refinance(c, s) {
+    const comp = c === "CA" ? caComp(s) : "monthly";
+    const P = +s.refBal || 0, costs = (+s.refCosts || 0) + (c === "CA" ? +s.refPenalty || 0 : 0), roll = !!s.refRoll;
+    const base = { n: 12, comp, varMode: "adjust", record: true, maxYears: 60 };
+    const old = simulate({ ...base, principal: P, amortYears: +s.refRemain || 1, rateAt: () => +s.refRate || 0 });
+    const nw = simulate({ ...base, principal: P + (roll ? costs : 0), amortYears: +s.refNewTerm || 1, rateAt: () => +s.refNewRate || 0 });
+    const M = Math.max(old.cum.length, nw.cum.length), at = (arr, m) => arr[Math.min(m, arr.length) - 1] || 0;
+    const net = []; let be = null;
+    for (let m = 1; m <= M; m++) { const v = at(old.cum, m) - at(nw.cum, m) - costs; net.push(v); if (be === null && v >= 0) be = m; }
+    const oldPay = old.first ? old.first.pay : 0, newPay = nw.first ? nw.first.pay : 0, save = oldPay - newPay;
+    return { oldPay, newPay, save, costs, roll, simpleBE: save > 0 ? costs / save : null, trueBE: be, net,
+      lifetime: old.totI - nw.totI - costs, oldTotI: old.totI, newTotI: nw.totI, extend: (+s.refNewTerm || 0) - (+s.refRemain || 0) };
+  }
+
+  /* ---------- Solve for rate, term, loan or payment ---------- */
+  function solve(c, s) {
+    const comp = c === "CA" ? caComp(s) : "monthly", im = r => perRate(r, comp, 12);
+    const L = +s.slvLoan || 0, pay = +s.slvPay || 0, rate = +s.slvRate || 0, yrsIn = +s.slvYears || 0, mode = s.slvMode;
+    const payment = (l, r, y) => pmt(l, im(r), y * 12);
+    let out = { mode, comp };
+    if (mode === "payment") out.value = payment(L, rate, yrsIn);
+    if (mode === "loan") { const i = im(rate), N = yrsIn * 12; out.value = i ? pay * (1 - Math.pow(1 + i, -N)) / i : pay * N; }
+    if (mode === "term") { const i = im(rate); out.value = pay <= L * i ? null : (i ? -Math.log(1 - L * i / pay) / Math.log(1 + i) : L / pay) / 12; out.interestOnly = L * i; }
+    if (mode === "rate") {
+      const N = yrsIn * 12;
+      if (pay * N < L) out.value = null, out.tooLow = true;
+      else if (payment(L, 30, yrsIn) < pay) out.value = 30, out.capped = true;
+      else { let lo = 0, hi = 30; for (let k = 0; k < 80; k++) { const mid = (lo + hi) / 2; if (payment(L, mid, yrsIn) > pay) hi = mid; else lo = mid; } out.value = (lo + hi) / 2; }
+    }
+    // Grid of payments around the answer
+    const loanG = mode === "loan" && out.value ? out.value : L;
+    const rBase = mode === "rate" && out.value != null ? out.value : rate;
+    const centre = Math.round(rBase * 4) / 4;
+    out.rates = [-1, -0.5, 0, 0.5, 1].map(d => +(centre + d).toFixed(2)).filter(r => r >= 0);
+    out.terms = c === "CA" ? [15, 20, 25, 30] : [10, 15, 20, 30];
+    out.grid = out.rates.map(r => out.terms.map(t => payment(loanG, r, t)));
+    out.gridLoan = loanG; out.target = mode === "payment" ? out.value : pay;
+    return out;
+  }
+
+  return { pmt, perRate, CA, US, armPath, simulate, computeCA, computeUS, affordCA, affordUS, landTransfer, comfort, compareOffers, penaltyCA, rentVsBuy, refinance, solve,
+    compute: (c, s) => (c === "CA" ? computeCA(s) : computeUS(s)), afford: (c, s) => (c === "CA" ? affordCA(s) : affordUS(s)) };
+})();
+</script>
+
+<script>
+/* ---------- UI ---------- */
+const $ = id => document.getElementById(id);
+const FIELDS = ["price","down","province","firstTime","newBuild","loanType","limit","fhaLimit","vaUse","pmi","finance","rateType","rateTypeUS","rate","term","amort","freq","comp","renewRate","varMode","shift","shiftAfter","termUS","freqUS","arm","margin","index","capI","capP","capL","tax","ins","hoa","heat","extra","lump","income","debts","util","maint","bigCity","closingOther","closingPct","takeHome","comfortPct","offARate","offAFees","offACash","offBRate","offBFees","offBCash","offHorizon","penMonths","penPosted","penDisc",
+  "rent","rentGrowth","rentIns","invest","appr","sellPct","costInfl","rbYears","refBal","refRate","refRemain","refNewRate","refNewTerm","refPenalty","refCosts","refRoll","slvMode","slvLoan","slvPay","slvRate","slvYears"];
+const DEFAULTS = {
+  CA: { price: 750000, down: 75000, province: "ON", firstTime: true, newBuild: false, rateType: "fixed", rate: 4.09, term: "5", amort: "25", freq: "m", comp: "auto", renewRate: "", varMode: "adjust", shift: 0.5, shiftAfter: 12, tax: 5200, ins: 1500, hoa: 0, heat: 100, extra: 0, lump: 0, income: 150000, debts: 600,
+    util: 250, maint: 1, bigCity: true, closingOther: 2500, takeHome: 9000, comfortPct: 30, offARate: 4.09, offAFees: 0, offACash: 0, offBRate: 3.89, offBFees: 2000, offBCash: 0, offHorizon: 5, penMonths: 24, penPosted: 5.49, penDisc: 1.5,
+    rent: 3000, rentGrowth: 3, rentIns: 30, invest: 6, appr: 3, sellPct: 5, costInfl: 2.5, rbYears: 10,
+    refBal: 600000, refRate: 5.49, refRemain: 22, refNewRate: 4.09, refNewTerm: 22, refPenalty: 4500, refCosts: 1500, refRoll: false,
+    slvMode: "rate", slvLoan: 600000, slvPay: 3000, slvRate: 4.09, slvYears: 25 },
+  US: { price: 450000, down: 45000, firstTime: false, loanType: "conv", limit: 832750, fhaLimit: 541287, vaUse: "first", pmi: "", finance: true, rateTypeUS: "fixed", rate: 6.25, termUS: "30", freqUS: "m", arm: "7/6", margin: 2.75, index: 4, capI: 5, capP: 1, capL: 5, tax: 5400, ins: 1900, hoa: 0, extra: 0, lump: 0, income: 120000, debts: 500,
+    util: 300, maint: 1, closingPct: 3, takeHome: 7200, comfortPct: 30, offARate: 6.25, offAFees: 0, offACash: 0, offBRate: 5.875, offBFees: 4050, offBCash: 0, offHorizon: 7,
+    rent: 2600, rentGrowth: 3.5, rentIns: 20, invest: 7, appr: 3.5, sellPct: 7, costInfl: 2.5, rbYears: 10,
+    refBal: 380000, refRate: 7.25, refRemain: 27, refNewRate: 6, refNewTerm: 30, refCosts: 9000, refRoll: true,
+    slvMode: "rate", slvLoan: 400000, slvPay: 2500, slvRate: 6.25, slvYears: 30 },
+};
+let country = "CA";
+let state = JSON.parse(JSON.stringify(DEFAULTS));
+try { const saved = JSON.parse(localStorage.getItem("xb-mortgage") || "null"); if (saved && saved.CA && saved.US) { state.CA = { ...state.CA, ...saved.CA }; state.US = { ...state.US, ...saved.US }; country = saved.country || "CA"; } } catch (e) {}
+const save = () => { try { localStorage.setItem("xb-mortgage", JSON.stringify({ ...state, country })); } catch (e) {} };
+
+const fmt = (v, d = 0) => new Intl.NumberFormat(country === "CA" ? "en-CA" : "en-US", { style: "currency", currency: country === "CA" ? "CAD" : "USD", minimumFractionDigits: d, maximumFractionDigits: d }).format(v || 0);
+const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const yrs = y => { const Y = Math.floor(y + 1e-9), M = Math.round((y - Y) * 12); if (M === 12) return `${Y + 1} yr`; if (Y === 0) return `${M} mo`; return `${Y} yr${M ? " " + M + " mo" : ""}`; };
+const PERIOD = { CA: { m: "month", sm: "semi-monthly payment", bw: "every 2 weeks", abw: "every 2 weeks", w: "week", aw: "week" }, US: { m: "month", bw: "every 2 weeks" } };
+
+function writeForm() {
+  const s = state[country];
+  for (const id of FIELDS) { const el = $(id); if (!(id in s)) continue; if (el.type === "checkbox") el.checked = !!s[id]; else el.value = s[id]; }
+  $("downPct").value = s.price ? +((s.down / s.price) * 100).toFixed(2) : 0;
+}
+function readForm() {
+  const s = state[country];
+  for (const id of FIELDS) { const el = $(id); if (!(id in s)) continue; s[id] = el.type === "checkbox" ? el.checked : el.value; }
+}
+function visibility() {
+  const s = state[country];
+  const when = { fixedCA: s.rateType === "fixed", variable: s.rateType === "variable", arm: s.rateTypeUS === "arm", conv: s.loanType === "conv", fha: s.loanType === "fha", va: s.loanType === "va", upfront: s.loanType !== "conv" };
+  document.querySelectorAll("[data-c]").forEach(el => {
+    let show = el.dataset.c === country;
+    if (show && el.dataset.when) show = when[el.dataset.when];
+    el.hidden = !show;
+  });
+  if (country === "CA") { $("bigCityWrap").hidden = !(s.province === "ON" || s.province === "QC"); $("bigCityText").textContent = s.province === "QC" ? "Property is in Montreal" : "Property is in Toronto"; }
+  $("rateHint").textContent = country === "CA"
+    ? "Insured mortgages (under 20% down) usually get the lowest rates; uninsured and $1.5M+ homes pay more."
+    : "Advertised rates usually assume 20% down and 740+ credit. Expect a higher rate with less down or lower credit.";
+  document.querySelectorAll(".lblFees").forEach(l => l.textContent = country === "CA" ? "Fees" : "Points & fees");
+  document.querySelectorAll(".lblCash").forEach(l => l.textContent = country === "CA" ? "Cash back" : "Lender credit");
+  $("btnCA").setAttribute("aria-pressed", country === "CA"); $("btnUS").setAttribute("aria-pressed", country === "US");
+  $("hoaLabel").textContent = country === "CA" ? "Condo fees / month" : "HOA dues / month";
+  $("rateLabel").textContent = country === "US" && s.rateTypeUS === "arm" ? "Initial rate %" : country === "CA" && s.rateType === "variable" ? "Starting rate %" : "Interest rate %";
+}
+
+function switchCountry(c) { readForm(); country = c; writeForm(); update(); }
+$("btnCA").onclick = () => switchCountry("CA");
+$("btnUS").onclick = () => switchCountry("US");
+
+document.addEventListener("input", e => {
+  if (!(FIELDS.includes(e.target.id) || e.target.id === "downPct")) return;
+  if (e.target.id === "downPct") { const p = +$("price").value || 0; $("down").value = Math.round(p * (+e.target.value || 0) / 100); }
+  if (e.target.id === "down") { const p = +$("price").value || 0; $("downPct").value = p ? +((+e.target.value / p) * 100).toFixed(2) : 0; }
+  if (e.target.id === "price") { const pctv = +$("downPct").value || 0; $("down").value = Math.round((+e.target.value || 0) * pctv / 100); }
+  if (e.target.id === "arm") { const p = Engine.US.ARMS[e.target.value]; $("capI").value = p[2]; $("capP").value = p[3]; $("capL").value = p[4]; }
+  readForm(); update();
+});
+$("useMin").onclick = () => {
+  readForm();
+  const s = state[country], p = +s.price || 0;
+  let m;
+  if (country === "CA") m = Engine.CA.minDown(p);
+  else { const t = s.loanType; m = p * (t === "fha" ? 0.035 : t === "va" ? 0 : s.firstTime ? 0.03 : 0.05); }
+  s.down = Math.ceil(m); writeForm(); update();
+};
+
+/* ---------- Rendering ---------- */
+function update() {
+  visibility(); save();
+  const s = state[country], r = Engine.compute(country, s);
+  renderSummary(r, s); renderAfford(r, s); renderCash(r, s); renderOffers(s); renderPenalty(s); renderCharts(r);
+  renderRent(s); renderRefi(s); renderSolve(s); renderSchedule(r); renderTables(r, s); renderNotes();
+}
+
+function renderSummary(r, s) {
+  const per = PERIOD[country][country === "CA" ? s.freq : s.freqUS];
+  const f = r.sim.first || { pay: 0, interest: 0, mi: 0 };
+  const parts = [
+    ["Principal & interest", f.pay, "var(--accent)"],
+    ["Mortgage insurance", f.mi, "var(--mi)"],
+    ["Property tax", (+s.tax || 0) / r.n, "var(--tax)"],
+    ["Home insurance", (+s.ins || 0) / r.n, "var(--interest)"],
+    [country === "CA" ? "Condo fees" : "HOA dues", (+s.hoa || 0) * 12 / r.n, "var(--muted)"],
+  ].filter(p => p[1] > 0.004);
+  const total = parts.reduce((a, p) => a + p[1], 0);
+  $("payLabel").textContent = "First payment, all in";
+  $("payBig").innerHTML = `${fmt(total, 2)}<span>/ ${per}</span>`;
+  $("payStack").innerHTML = parts.map(p => `<i style="width:${(p[1] / total) * 100}%;background:${p[2]}"></i>`).join("");
+  $("payLegend").innerHTML = parts.map(p => `<div><span><span class="dot" style="background:${p[2]}"></span>${p[0]}</span><b>${fmt(p[1], 2)}</b></div>`).join("");
+  $("msgs").innerHTML = r.msgs.map(m => `<div class="msg ${m[0]}">${m[1]}</div>`).join("");
+
+  const sim = r.sim, facts = [];
+  facts.push(["Mortgage amount", fmt(r.loan)]);
+  facts.push(["Down payment", `${fmt(r.down)} · ${pct(r.dp)}`]);
+  facts.push(["Loan-to-value", pct(r.ltv)]);
+  if (r.upfront > 0) facts.push([r.upfrontLabel, `${fmt(r.upfront)} · ${pct(r.upfrontRate, 2)}`]);
+  if (country === "CA") {
+    facts.push([`End of ${r.term}-yr term balance`, fmt(sim.termStats.balance)]);
+    facts.push([`Interest during term`, fmt(sim.termStats.interest)]);
+    facts.push(["Stress-test rate", `${r.qRate.toFixed(2)}%`]);
+    facts.push(["Qualifying payment", `${fmt(r.qPay)} / mo`]);
+    if (r.triggerRate) facts.push(["Trigger rate", `${r.triggerRate.toFixed(2)}%`]);
+    if (r.gds != null) facts.push(["GDS / TDS", `${pct(r.gds)} / ${pct(r.tds)}`]);
+  } else {
+    if (r.arm) {
+      facts.push([`Rate after ${r.arm.initYears} yrs`, `${r.arm.firstReset.toFixed(3)}%`]);
+      facts.push(["Highest payment at your index", fmt(r.arm.resetPay * r.n / 12) + " / mo"]);
+      facts.push(["Worst case (caps maxed)", fmt(r.arm.worstPay * r.n / 12) + " / mo"]);
+    }
+    if (r.sim.totMI > 0) facts.push([r.type === "fha" ? "Total FHA MIP" : "Total PMI", fmt(sim.totMI)]);
+    if (sim.miEnd != null && r.type === "conv") facts.push(["PMI ends", `after ${yrs(sim.miEnd)}`]);
+    if (r.front != null) facts.push(["DTI front / back", `${pct(r.front)} / ${pct(r.back)}`]);
+  }
+  facts.push(["Total interest", fmt(sim.totI)]);
+  facts.push(["Paid off in", yrs(sim.payoffYears)]);
+  if (r.noExtra !== sim) {
+    const saved = r.noExtra.totI - sim.totI, faster = r.noExtra.payoffYears - sim.payoffYears;
+    facts.push(["Prepayments save", `${fmt(saved)} · ${yrs(faster)} sooner`]);
+  }
+  $("facts").innerHTML = facts.map(f => `<div><dt>${f[0]}</dt><dd>${f[1]}</dd></div>`).join("");
+  $("balNote").textContent = country === "CA"
+    ? `Remaining balance at each year end. The dashed line marks renewal at the end of your ${r.term}-year term.`
+    : r.arm ? `Remaining balance at each year end. The dashed line marks the first rate adjustment.` : "Remaining balance at each year end.";
+}
+
+const WHY = { GDS: "GDS limit (39%)", TDS: "TDS limit (44%)", front: "housing ratio", back: "total debt ratio", down: "your down payment", amort: "amortization eligibility", fhaLimit: "county FHA loan limit", ratio: "debt ratios" };
+function renderComfort(r, s) {
+  const c = Engine.comfort(country, s), el = $("comfortOut");
+  if (!c) { el.innerHTML = `<div class="empty" style="margin-top:14px">Add your monthly take-home pay under <b>Qualification</b> to see a comfortable budget next to the lender maximum.</div>`; return; }
+  const housing = (r.sim.first.pay + r.sim.first.mi) * r.n / 12 + ((+s.tax || 0) + (+s.ins || 0)) / 12 + (+s.hoa || 0);
+  const share = housing / (+s.takeHome);
+  el.innerHTML = `<div class="aff" style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line)">
+      <div><div class="lbl">Comfortable price (${+s.comfortPct || 30}% of take-home)</div><div class="num" style="color:var(--interest)">${c.best ? fmt(c.best.p) : "—"}</div></div>
+      <div><div class="lbl">Housing budget</div><div class="sub">${fmt(c.room)} / mo</div></div>
+      <div><div class="lbl">This home's housing cost</div><div class="sub">${fmt(housing)} / mo</div></div>
+      <div><div class="lbl">Share of take-home</div><div class="sub">${pct(share)} <span class="pill ${share > (+s.comfortPct || 30) / 100 ? "bad" : ""}">${share > (+s.comfortPct || 30) / 100 ? "Above target" : "Within target"}</span></div></div>
+    </div><p class="lbl" style="margin:8px 0 0">Uses your actual rate, not the stress test. Housing = mortgage payment, insurance, property tax and ${country === "CA" ? "condo" : "HOA"} fees.</p>`;
+}
+
+function renderAfford(r, s) {
+  renderComfort(r, s);
+  const a = Engine.afford(country, s), el = $("afford");
+  if (!a) {
+    el.innerHTML = `<div class="empty">Enter your gross household income under <b>Qualification</b> to see the most you can borrow and the highest home price you could buy.</div>`;
+    return;
+  }
+  const b = a.best, rateNote = `Qualifying at ${a.qRate.toFixed(2)}%${country === "CA" ? " (stress test)" : a.qRate !== +s.rate ? " (ARM qualifying rate)" : ""} · ${a.limits}`;
+  $("affordNote").textContent = rateNote;
+  const ok = (+s.income || 0) >= a.incomeNeeded - 1;
+  const need = `<span class="pill ${ok ? "" : "bad"}">${ok ? "This home passes" : "This home is over your limit"}</span> Income needed for ${fmt(+s.price)}: <b>${fmt(Math.ceil(a.incomeNeeded / 100) * 100)}</b>/yr`;
+  if (!b) { el.innerHTML = `<div class="empty">With this income, debt and down payment, the ratios don't support a mortgage at ${a.qRate.toFixed(2)}%. Lower debts or a larger down payment would help.</div><div class="affbar">${need}</div>`; return; }
+  el.innerHTML = `<div class="aff">
+      <div><div class="lbl">Max home price</div><div class="num">${fmt(b.p)}</div></div>
+      <div><div class="lbl">Max mortgage${r.upfront || b.loan > b.p - (+s.down || 0) + 1 ? " (incl. insurance/fees)" : ""}</div><div class="sub">${fmt(b.loan)}</div></div>
+      <div><div class="lbl">Qualifying payment</div><div class="sub">${fmt(b.pi)} / mo</div></div>
+      <div><div class="lbl">Limited by</div><div class="sub">${WHY[b.limit] || b.limit}</div></div>
+    </div>
+    <div class="affbar">${need}<button type="button" class="btn" id="usePrice">Use ${fmt(b.p)} as home price</button></div>`;
+  $("usePrice").onclick = () => { readForm(); const st = state[country], pc = st.price ? st.down / st.price : 0; st.price = b.p; writeForm(); $("downPct").value = +((st.down / b.p) * 100).toFixed(2); update(); };
+}
+
+function renderCash(r, s) {
+  const row = (l, v, cls = "") => `<div class="${cls}"><span>${l}</span><b>${v < 0 ? "−" + fmt(-v) : fmt(v)}</b></div>`;
+  $("closeList").innerHTML = `<h3>Cash to close</h3>` + r.close.map(l => row(l[0], l[1])).join("") + row("Total cash needed", r.cashToClose, "tot");
+  const pay = (r.sim.first.pay + r.sim.first.mi) * r.n / 12;
+  const items = [["Mortgage payment" + (r.sim.first.mi ? " + insurance" : ""), pay], ["Property tax", (+s.tax || 0) / 12], ["Home insurance", (+s.ins || 0) / 12],
+    [country === "CA" ? "Condo fees" : "HOA dues", +s.hoa || 0], ["Utilities", +s.util || 0], ["Maintenance reserve", r.price * (+s.maint || 0) / 100 / 12]].filter(i => i[1] > 0);
+  const tot = items.reduce((a, i) => a + i[1], 0);
+  r.trueMonthly = tot;
+  $("trueList").innerHTML = `<h3>True monthly cost</h3>` + items.map(i => row(i[0], i[1])).join("") + row("Total per month", tot, "tot") +
+    (r.n !== 12 ? `<div class="lbl" style="font-size:12px;color:var(--muted)">Payments converted to a monthly average.</div>` : "");
+}
+
+function renderOffers(s) {
+  const o = Engine.compareOffers(country, s), per = country === "CA" ? s.freq : s.freqUS;
+  const sh = { m: "/mo", sm: "/semi-mo", bw: "/2 wk", abw: "/2 wk", w: "/wk", aw: "/wk" }[per];
+  const col = (k, x) => `<div class="legend"><h3>Offer ${k} · ${x.rate.toFixed(3).replace(/0$/, "")}%</h3>
+    <div><span>Payment</span><b>${fmt(x.pay, 2)}${sh}</b></div><div><span>Interest over ${o.horizon} yrs</span><b>${fmt(x.interest)}</b></div>
+    <div><span>${country === "CA" ? "Fees" : "Points & fees"}</span><b>${fmt(x.fees)}</b></div>${x.cash ? `<div><span>${country === "CA" ? "Cash back" : "Lender credit"}</span><b>−${fmt(x.cash)}</b></div>` : ""}
+    <div><span>Balance after ${o.horizon} yrs</span><b>${fmt(x.balance)}</b></div><div class="tot"><span>Net cost</span><b>${fmt(x.total)}</b></div></div>`;
+  const be = o.breakEven ? ` The lines cross after ${yrs(o.breakEven)}; ${o.breakEven <= o.horizon ? "keep the mortgage longer than that and the offer with higher upfront costs wins." : ""}` : "";
+  $("offOut").innerHTML = `<div class="verdict">${o.diff < 1 ? "The two offers cost the same over this period." : `Offer ${o.winner} costs ${fmt(o.diff)} less over ${o.horizon} years.`}<span class="lbl" style="font-weight:400;color:var(--muted);font-size:14px">${be}</span></div>
+    <div class="two" style="gap:24px">${col("A", o.A)}${col("B", o.B)}</div>`;
+  lastOffers = o; drawOffers(o);
+}
+let lastOffers = null;
+function drawOffers(o) {
+  const el = $("offChart"), W = Math.max(280, el.clientWidth), H = 190, L = 46, R = 12, T = 22, B = 26;
+  const toPts = x => [[0, x.fees - x.cash], ...x.cost.map((c, k) => [(k + 1) / o.n, c])];
+  const A = toPts(o.A), Bp = toPts(o.B), all = [...A, ...Bp].map(p => p[1]);
+  const yMax = niceMax(Math.max(...all)), xMax = o.horizon;
+  const x = v => L + (v / xMax) * (W - L - R), y = v => T + (1 - Math.max(0, v) / yMax) * (H - T - B);
+  let g = "";
+  for (let i = 0; i <= 4; i++) { const v = (yMax / 4) * i; g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${css("--line")}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`; }
+  for (let v = 0; v <= xMax; v += xMax > 10 ? 2 : 1) g += `<text x="${x(v)}" y="${H - 8}" text-anchor="middle">${v}</text>`;
+  const path = pts => pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+  const leg = `<rect x="${L}" y="4" width="9" height="9" rx="2" fill="${css("--accent")}"/><text x="${L + 13}" y="12.5">Offer A net cost</text><rect x="${L + 120}" y="4" width="9" height="9" rx="2" fill="${css("--interest")}"/><text x="${L + 133}" y="12.5">Offer B net cost</text>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Cumulative net cost of each offer by year">${g}<path d="${path(A)}" fill="none" stroke="${css("--accent")}" stroke-width="2.25"/><path d="${path(Bp)}" fill="none" stroke="${css("--interest")}" stroke-width="2.25" stroke-dasharray="6 3"/>${leg}</svg>`;
+}
+
+function renderPenalty(s) {
+  if (country !== "CA") return;
+  const p = Engine.penaltyCA(s), el = $("penOut");
+  if (p.invalid) { el.innerHTML = `<div class="empty">Enter a month between 1 and ${p.term * 12 - 1}, inside your ${p.term}-year term.</div>`; return; }
+  el.innerHTML = `<div class="aff">
+    <div><div class="lbl">Estimated penalty</div><div class="num">${fmt(p.penalty)}</div></div>
+    <div><div class="lbl">Balance at that point</div><div class="sub">${fmt(p.bal)}</div></div>
+    <div><div class="lbl">3 months' interest</div><div class="sub">${fmt(p.threeMonths)}</div></div>
+    ${p.ird != null ? `<div><div class="lbl">IRD (${p.rate.toFixed(2)}% vs ${p.cmpRate.toFixed(2)}%, ${yrs(p.remainingYears)} left)</div><div class="sub">${fmt(p.ird)}</div></div>` : ""}
+  </div><p class="lbl" style="margin:10px 0 0">${p.ird == null ? "Variable-rate mortgages normally charge 3 months' interest." : `Charged: ${p.method}. Big banks compare against a posted rate minus your original discount, which makes the IRD much larger; check your mortgage contract.`}</p>`;
+}
+
+$("copyBtn").onclick = () => {
+  const s = state[country], r = Engine.compute(country, s), a = Engine.afford(country, s), c = Engine.comfort(country, s);
+  const per = PERIOD[country][country === "CA" ? s.freq : s.freqUS];
+  const all = r.sim.first.pay + r.sim.first.mi + r.escrow;
+  const typ = country === "CA" ? `${s.rateType} rate, ${r.term}-yr term, ${r.amort}-yr amortization` : `${s.loanType === "conv" ? "Conventional" : s.loanType.toUpperCase()} ${s.rateTypeUS === "arm" ? s.arm + " ARM" : "fixed"}, ${r.term}-yr`;
+  renderCash(r, s);
+  const lines = [
+    `${country === "CA" ? "Canada" : "U.S."} mortgage scenario`,
+    `Home price: ${fmt(r.price)} · Down: ${fmt(r.down)} (${pct(r.dp)})`,
+    `Mortgage: ${fmt(r.loan)} at ${(+s.rate).toFixed(2)}% (${typ})`,
+    `Payment: ${fmt(all, 2)} per ${per} all-in (P&I ${fmt(r.sim.first.pay, 2)})`,
+    `Cash to close: ${fmt(r.cashToClose)}`,
+    `True monthly cost: ${fmt(r.trueMonthly)}`,
+    `Total interest over the loan: ${fmt(r.sim.totI)}`,
+    a && a.best ? `Lender maximum price: ${fmt(a.best.p)}` : null,
+    c && c.best ? `Comfortable price: ${fmt(c.best.p)}` : null,
+    `Estimates only. Made with CrossBorder Mortgage Calculator.`,
+  ].filter(Boolean).join("\n");
+  const box = $("shareBox"), done = t => { $("copyStatus").textContent = t; setTimeout(() => $("copyStatus").textContent = "", 3000); };
+  const fallback = () => { box.hidden = false; box.value = lines; box.focus(); box.select(); done("Select and copy the text below."); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(lines).then(() => { box.hidden = true; done("Copied."); }, fallback);
+  else fallback();
+};
+
+/* ---------- Tabs ---------- */
+const TABS = ["calc", "rent", "refi", "solve"];
+let tab = "calc";
+try { tab = localStorage.getItem("xb-tab") || "calc"; } catch (e) {}
+if (TABS.includes((location.hash || "").slice(1))) tab = location.hash.slice(1);
+function showTab(t) {
+  tab = TABS.includes(t) ? t : "calc";
+  TABS.forEach(k => { $("tab-" + k).hidden = k !== tab; $("t-" + k).setAttribute("aria-selected", k === tab); $("t-" + k).tabIndex = k === tab ? 0 : -1; });
+  try { localStorage.setItem("xb-tab", tab); } catch (e) {}
+  requestAnimationFrame(redraw);
+}
+TABS.forEach((k, i) => {
+  $("t-" + k).onclick = () => showTab(k);
+  $("t-" + k).onkeydown = e => { if (e.key === "ArrowRight" || e.key === "ArrowLeft") { const n = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]; showTab(n); $("t-" + n).focus(); } };
+});
+
+/* ---------- Shared line chart (handles negative values) ---------- */
+const toolCharts = {};
+const sfmt = v => (v < 0 ? "−" : "") + short(Math.abs(v));
+function lineChart(el, series, o) {
+  const W = Math.max(280, el.clientWidth), H = o.h || 210, L = 52, R = 12, T = 24, B = 26;
+  const ys = series.flatMap(s => s.pts.map(p => p[1]));
+  let yMin = Math.min(0, ...ys), yMax = Math.max(0, ...ys);
+  const step = niceMax((yMax - yMin) / 4 || 1);
+  yMax = Math.ceil(yMax / step) * step; yMin = Math.floor(yMin / step) * step; if (yMax === yMin) yMax = yMin + step;
+  const x = v => L + (v / o.xMax) * (W - L - R), y = v => T + ((yMax - v) / (yMax - yMin)) * (H - T - B);
+  let g = "";
+  for (let v = yMin; v <= yMax + step / 2; v += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${css(Math.abs(v) < 1e-9 && yMin < 0 ? "--muted" : "--line")}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${sfmt(v)}</text>`;
+  const xs = o.xMax > 20 ? 5 : o.xMax > 8 ? 2 : 1;
+  for (let v = 0; v <= o.xMax + 1e-9; v += xs) g += `<text x="${x(v)}" y="${H - 8}" text-anchor="middle">${v}</text>`;
+  let leg = "", lx = L;
+  const paths = series.map(s => {
+    leg += `<rect x="${lx}" y="4" width="9" height="9" rx="2" fill="${css(s.color)}"/><text x="${lx + 13}" y="12.5">${s.label}</text>`; lx += 24 + s.label.length * 6.2;
+    const d = s.pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+    return `<path d="${d}" fill="none" stroke="${css(s.color)}" stroke-width="2.25"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}/>`;
+  }).join("");
+  let mark = "";
+  if (o.mark && o.mark.x <= o.xMax) mark = `<line x1="${x(o.mark.x)}" x2="${x(o.mark.x)}" y1="${T}" y2="${H - B}" stroke="${css("--ink")}" stroke-dasharray="4 4"/><text x="${Math.min(x(o.mark.x) + 5, W - 90)}" y="${T + 12}" style="fill:${css("--ink")}">${o.mark.label}</text>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${o.aria}">${g}${paths}${mark}${leg}</svg>`;
+}
+
+/* ---------- Rent vs buy ---------- */
+function renderRent(s) {
+  const rb = Engine.rentVsBuy(country, s);
+  $("rbFrom").innerHTML = `Uses the Mortgage tab: ${fmt(rb.price)} home, ${fmt(+s.down)} down, ${(+s.rate).toFixed(2)}%, plus its tax, insurance, fees and maintenance.`;
+  $("rbVerdict").textContent = rb.winner === "buy" ? `Buying comes out ${fmt(rb.diff)} ahead after ${rb.years} years` : `Renting comes out ${fmt(rb.diff)} ahead after ${rb.years} years`;
+  $("rbSub").textContent = rb.be ? `Buying overtakes renting in year ${rb.be}.` : `Buying doesn't overtake renting within ${rb.years} years at these assumptions.`;
+  $("rbTiles").innerHTML = `
+    <div><div class="lbl">Net worth if you buy</div><div class="num">${fmt(rb.buyNW)}</div></div>
+    <div><div class="lbl">Net worth if you rent</div><div class="num" style="color:var(--interest)">${fmt(rb.rentNW)}</div></div>
+    <div><div class="lbl">First-year cost / month</div><div class="sub">Own ${fmt(rb.firstOwn)} · Rent ${fmt(rb.firstRent)}</div></div>
+    <div><div class="lbl">Money you don't get back (${rb.years} yrs)</div><div class="sub">Own ${fmt(rb.totOwn)} · Rent ${fmt(rb.totRent)}</div></div>`;
+  $("rbTable").innerHTML = `<thead><tr><th>Year</th><th>Owning cost</th><th>Rent</th><th>Home value</th><th>Mortgage</th><th>Buy net worth</th><th>Rent net worth</th></tr></thead><tbody>` +
+    rb.rows.map(r => `<tr${r.y === rb.be ? ' class="cur"' : ""}><td>${r.y}</td><td>${fmt(r.own)}</td><td>${fmt(r.rent)}</td><td>${fmt(r.value)}</td><td>${fmt(r.bal)}</td><td>${fmt(r.buyNW)}</td><td>${fmt(r.rentNW)}</td></tr>`).join("") + "</tbody>";
+  toolCharts.rent = () => lineChart($("rbChart"), [
+    { pts: [[0, rb.start.buy], ...rb.rows.map(r => [r.y, r.buyNW])], color: "--accent", label: "Buy" },
+    { pts: [[0, rb.start.rent], ...rb.rows.map(r => [r.y, r.rentNW])], color: "--interest", label: "Rent", dash: "6 3" },
+  ], { xMax: rb.years, aria: "Net worth of buying vs renting by year", mark: rb.be ? { x: rb.be, label: "Buying pulls ahead" } : null });
+  if (!$("tab-rent").hidden) toolCharts.rent();
+  $("rbNotes").innerHTML = `<ul style="margin:0;padding-left:18px;display:grid;gap:6px;font-size:14px">
+    <li>Mortgage interest, insurance, tax, fees and maintenance are costs you don't get back; principal builds equity.</li>
+    <li>Whichever path costs less each year invests the difference at your investment return.</li>
+    <li>${country === "CA" ? "A principal residence is exempt from capital gains tax in Canada. If the renter invests in a TFSA or FHSA, growth is tax-free too, so use a pre-tax return." : "Up to $250k ($500k for couples) of home sale gain is tax-free in the U.S. Mortgage interest is only deductible if you itemize, which most people don't."}</li>
+    <li>Small changes to price growth and investment return swing the result. Try a few values.</li></ul>`;
+}
+
+/* ---------- Refinance ---------- */
+function renderRefi(s) {
+  const r = Engine.refinance(country, s);
+  $("refNewTermLbl").textContent = country === "CA" ? "New amortization (yrs)" : "New loan term (yrs)";
+  $("refCostsLbl").textContent = country === "CA" ? "Legal, appraisal & discharge" : "Closing costs";
+  const be = r.trueBE ? yrs(r.trueBE / 12) : "never";
+  $("rfVerdict").textContent = r.trueBE && r.lifetime > 0 ? `Pays for itself in ${be}` : r.trueBE ? `Breaks even in ${be}, but costs more over the full loan` : "This refinance doesn't pay off";
+  $("rfSub").textContent = r.save > 0 ? `You'd save ${fmt(r.save)} a month on payments.` : `Your payment would rise by ${fmt(-r.save)} a month.`;
+  $("rfTiles").innerHTML = `
+    <div><div class="lbl">Current payment</div><div class="sub">${fmt(r.oldPay, 2)} / mo</div></div>
+    <div><div class="lbl">New payment</div><div class="sub">${fmt(r.newPay, 2)} / mo</div></div>
+    <div><div class="lbl">Refinancing costs</div><div class="sub">${fmt(r.costs)}${r.roll ? " (added to loan)" : ""}</div></div>
+    <div><div class="lbl">Simple break-even</div><div class="sub">${r.simpleBE ? Math.ceil(r.simpleBE) + " months" : "—"}</div></div>
+    <div><div class="lbl">True break-even</div><div class="sub">${r.trueBE ? r.trueBE + " months" : "Never"}</div></div>
+    <div><div class="lbl">Lifetime interest saved, after costs</div><div class="sub" style="color:${r.lifetime >= 0 ? "var(--ok)" : "var(--err)"}">${r.lifetime < 0 ? "−" : ""}${fmt(Math.abs(r.lifetime))}</div></div>`;
+  const m = [];
+  if (r.extend > 0) m.push(["warn", `The new loan runs ${r.extend} year${r.extend > 1 ? "s" : ""} longer than what you have left, so part of the lower payment comes from stretching the loan.`]);
+  m.push(["info", "Simple break-even = costs ÷ monthly payment savings. True break-even counts interest actually saved, which accounts for the new balance and term."]);
+  if (country === "CA") m.push(["info", "Refinancing mid-term usually means a prepayment penalty. Renewing at the end of your term avoids it, and switching lenders at renewal skips the stress test."]);
+  $("rfMsgs").innerHTML = m.map(x => `<div class="msg ${x[0]}">${x[1]}</div>`).join("");
+  const span = Math.min(r.net.length, 12 * 30), pts = [[0, -r.costs]];
+  for (let k = 0; k < span; k += 1) if (k % 3 === 2 || k === span - 1) pts.push([(k + 1) / 12, r.net[k]]);
+  toolCharts.refi = () => lineChart($("rfChart"), [{ pts, color: "--accent", label: "Net savings" }],
+    { xMax: Math.ceil(span / 12), aria: "Cumulative refinance savings by year", mark: r.trueBE ? { x: r.trueBE / 12, label: "Break-even" } : null });
+  if (!$("tab-refi").hidden) toolCharts.refi();
+}
+$("refFill").onclick = () => {
+  readForm(); const s = state[country], r = Engine.compute(country, s);
+  s.refBal = Math.round(r.loan); s.refRate = s.rate; s.refRemain = country === "CA" ? s.amort : s.termUS;
+  writeForm(); update();
+};
+
+/* ---------- Solve ---------- */
+function renderSolve(s) {
+  const o = Engine.solve(country, s), mode = s.slvMode;
+  const show = { loan: mode !== "loan", pay: mode !== "payment", rate: mode !== "rate", years: mode !== "term" };
+  document.querySelectorAll("[data-s]").forEach(el => el.hidden = !show[el.dataset.s]);
+  $("slvYearsLbl").textContent = country === "CA" ? "Amortization (yrs)" : "Loan term (yrs)";
+  const comp = o.comp === "semi" ? "compounded semi-annually" : "compounded monthly";
+  let label = "", big = "—", sub = "";
+  if (mode === "rate") { label = "Rate needed"; if (o.tooLow) sub = `A ${fmt(+s.slvPay)} payment doesn't even repay ${fmt(+s.slvLoan)} in ${s.slvYears} years at 0%. Raise the payment or lengthen the loan.`; else { big = o.capped ? "30%+" : o.value.toFixed(2) + "%"; sub = `The highest rate (${comp}) at which ${fmt(+s.slvLoan)} over ${s.slvYears} years costs ${fmt(+s.slvPay)} a month or less.`; } }
+  if (mode === "term") { label = "Years needed"; if (o.value == null) sub = `${fmt(+s.slvPay)} doesn't cover the ${fmt(o.interestOnly)} of monthly interest, so the loan would never be repaid.`; else { big = yrs(o.value); sub = `${fmt(+s.slvLoan)} at ${(+s.slvRate).toFixed(2)}% paid off with ${fmt(+s.slvPay)} a month.${country === "CA" && o.value > 30 ? " Longer than the 30-year maximum for most lenders." : ""}${country === "US" && o.value > 30 ? " Longer than a standard 30-year U.S. loan." : ""}`; } }
+  if (mode === "loan") { label = "Biggest loan"; big = fmt(o.value); sub = `What ${fmt(+s.slvPay)} a month repays over ${s.slvYears} years at ${(+s.slvRate).toFixed(2)}%. Taxes, insurance and fees come on top.`; }
+  if (mode === "payment") { label = "Monthly payment"; big = fmt(o.value, 2); sub = `Principal and interest on ${fmt(+s.slvLoan)} over ${s.slvYears} years at ${(+s.slvRate).toFixed(2)}% ${comp}.`; }
+  $("slvLabel").textContent = label; $("slvBig").textContent = big; $("slvSub").textContent = sub;
+  $("slvGridNote").textContent = `For a ${fmt(o.gridLoan)} loan. Green cells are at or under ${fmt(o.target)} a month.`;
+  const hotR = mode === "rate" ? null : +s.slvRate, hotT = mode === "term" ? null : +s.slvYears;
+  $("slvGrid").innerHTML = `<thead><tr><th>Rate</th>${o.terms.map(t => `<th>${t} yr</th>`).join("")}</tr></thead><tbody>` +
+    o.rates.map((r, i) => `<tr><td>${r.toFixed(2)}%</td>${o.grid[i].map((p, j) => `<td class="${p <= o.target + 0.005 ? "fit" : ""}${Math.abs(r - hotR) < 0.001 && o.terms[j] === hotT ? " hot" : ""}">${fmt(p)}</td>`).join("")}</tr>`).join("") + "</tbody>";
+}
+$("slvFill").onclick = () => {
+  readForm(); const s = state[country], r = Engine.compute(country, s);
+  s.slvLoan = Math.round(r.loan); s.slvRate = s.rate; s.slvYears = country === "CA" ? s.amort : s.termUS; s.slvPay = Math.round(r.sim.first.pay * r.n / 12);
+  writeForm(); update();
+};
+
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const niceMax = v => { if (v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))); const m = v / e; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * e; };
+const short = v => (v >= 1e6 ? (v / 1e6).toFixed(v % 1e6 ? 1 : 0) + "M" : v >= 1e3 ? Math.round(v / 1e3) + "k" : Math.round(v) + "");
+
+let lastResult = null;
+function renderCharts(r) {
+  lastResult = r;
+  const years = r.sim.years; if (!years.length) { $("balChart").innerHTML = $("barChart").innerHTML = ""; return; }
+  // Balance chart
+  {
+    const el = $("balChart"), W = Math.max(280, el.clientWidth), H = 210, L = 46, R = 12, T = 12, B = 26;
+    const pts = [[0, r.loan], ...years.map(y => [Math.min(y.year, r.sim.payoffYears), y.balance])];
+    const xMax = Math.max(1, Math.ceil(r.sim.payoffYears)), yMax = niceMax(Math.max(...pts.map(p => p[1])));
+    const x = v => L + (v / xMax) * (W - L - R), y = v => T + (1 - v / yMax) * (H - T - B);
+    let g = "";
+    for (let i = 0; i <= 4; i++) { const v = (yMax / 4) * i; g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${css("--line")}" stroke-width="1"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`; }
+    const step = xMax > 20 ? 5 : xMax > 8 ? 2 : 1;
+    for (let v = 0; v <= xMax; v += step) g += `<text x="${x(v)}" y="${H - 8}" text-anchor="middle">${v}</text>`;
+    const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join("");
+    const area = `${line}L${x(pts[pts.length - 1][0])},${y(0)}L${x(0)},${y(0)}Z`;
+    let mark = "";
+    const mx = country === "CA" ? r.term : r.arm ? r.arm.initYears : null;
+    if (mx && mx < r.sim.payoffYears) {
+      const label = country === "CA" ? "Renewal" : "First reset";
+      mark = `<line x1="${x(mx)}" x2="${x(mx)}" y1="${T}" y2="${H - B}" stroke="${css("--ink")}" stroke-dasharray="4 4" stroke-width="1"/><text x="${x(mx) + 5}" y="${T + 12}" style="fill:${css("--ink")}">${label}</text>`;
+    }
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Remaining balance by year">${g}<path d="${area}" fill="${css("--accent")}" fill-opacity=".14"/><path d="${line}" fill="none" stroke="${css("--accent")}" stroke-width="2.25"/>${mark}<circle cx="${x(pts[pts.length - 1][0])}" cy="${y(pts[pts.length - 1][1])}" r="3.5" fill="${css("--accent")}"/></svg>`;
+  }
+  // Annual split bars
+  {
+    const el = $("barChart"), W = Math.max(280, el.clientWidth), H = 220, L = 46, R = 12, T = 22, B = 26;
+    const yMax = niceMax(Math.max(...years.map(y => y.principal + y.interest + y.mi)));
+    const bw = (W - L - R) / years.length, x = i => L + i * bw, y = v => T + (1 - v / yMax) * (H - T - B);
+    let g = "";
+    for (let i = 0; i <= 4; i++) { const v = (yMax / 4) * i; g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${css("--line")}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${short(v)}</text>`; }
+    const step = years.length > 20 ? 5 : years.length > 8 ? 2 : 1;
+    let bars = "";
+    years.forEach((yr, i) => {
+      const w = Math.max(1, bw - (bw > 6 ? 2 : 0.5)); let base = 0;
+      for (const [v, c] of [[yr.principal, "--accent"], [yr.interest, "--interest"], [yr.mi, "--mi"]]) {
+        if (v <= 0) continue; bars += `<rect x="${x(i)}" y="${y(base + v)}" width="${w}" height="${Math.max(0, y(base) - y(base + v))}" fill="${css(c)}"/>`; base += v;
+      }
+      if ((yr.year - 1) % step === 0 || yr.year === 1) g += `<text x="${x(i) + bw / 2}" y="${H - 8}" text-anchor="middle">${yr.year}</text>`;
+    });
+    const leg = [["Principal", "--accent"], ["Interest", "--interest"], ...(r.sim.totMI > 0 ? [["Mortgage insurance", "--mi"]] : [])];
+    let lx = L, legend = "";
+    leg.forEach(([t, c]) => { legend += `<rect x="${lx}" y="4" width="9" height="9" rx="2" fill="${css(c)}"/><text x="${lx + 13}" y="12.5">${t}</text>`; lx += 20 + t.length * 6.2; });
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="Principal and interest paid per year">${g}${bars}${legend}</svg>`;
+  }
+}
+const redraw = () => { if (lastResult) renderCharts(lastResult); if (lastOffers) drawOffers(lastOffers); for (const f of Object.values(toolCharts)) f(); };
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(redraw, 120); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", redraw);
+new MutationObserver(redraw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+function renderSchedule(r) {
+  const hasMI = r.sim.totMI > 0;
+  $("schedule").innerHTML = `<thead><tr><th>Year</th><th>Rate</th><th>Paid</th><th>Interest</th><th>Principal</th>${hasMI ? "<th>Insurance</th>" : ""}<th>Balance</th></tr></thead><tbody>` +
+    r.sim.years.map(y => `<tr${country === "CA" && y.year === r.term ? ' class="cur"' : ""}><td>${y.year}</td><td>${y.rate.toFixed(2)}%</td><td>${fmt(y.paid)}</td><td>${fmt(y.interest)}</td><td>${fmt(y.principal)}</td>${hasMI ? `<td>${fmt(y.mi)}</td>` : ""}<td>${fmt(y.balance)}</td></tr>`).join("") + "</tbody>";
+}
+
+function renderTables(r, s) {
+  const per = country === "CA" ? s.freq : s.freqUS;
+  const short = { m: "/mo", sm: "/semi-mo", bw: "/2 wk", abw: "/2 wk", w: "/wk", aw: "/wk" }[per];
+  // Down payment options
+  const minPct = r.price ? Math.ceil((r.minDown / r.price) * 1000) / 10 : 5;
+  let opts = [minPct, 5, 10, 15, 20, 25].filter(p => p >= minPct - 1e-9);
+  const curPct = +(r.dp * 100).toFixed(2);
+  opts = [...new Set([...opts.map(p => +p.toFixed(1)), curPct])].sort((a, b) => a - b);
+  const rows = opts.map(p => {
+    const t = { ...s, down: Math.round(r.price * p / 100) }, x = Engine.compute(country, t);
+    const ok = !x.msgs.some(m => m[0] === "err");
+    return `<tr${Math.abs(p - curPct) < 0.01 ? ' class="cur"' : ""}><td>${p}%</td><td>${fmt(t.down)}</td><td>${x.upfront ? fmt(x.upfront) : "—"}</td><td>${fmt(x.sim.first.pay + x.sim.first.mi, 0)}${short}</td><td${ok ? "" : ' class="na"'}>${fmt(x.sim.totI)}</td></tr>`;
+  }).join("");
+  $("dpTable").innerHTML = `<thead><tr><th>Down</th><th>Amount</th><th>${country === "CA" ? "Premium" : "Upfront fee"}</th><th>P&amp;I${country === "US" ? "+MI" : ""}</th><th>Interest</th></tr></thead><tbody>${rows}</tbody>`;
+  // Amortization / term options
+  const key = country === "CA" ? "amort" : "termUS";
+  const list = country === "CA" ? ["15", "20", "25", "30"] : ["10", "15", "20", "30"];
+  $("amTitle").textContent = country === "CA" ? "Amortization options" : "Loan term options";
+  const arows = list.map(a => {
+    const t = { ...s, [key]: a }, x = Engine.compute(country, t);
+    const bad = x.msgs.find(m => m[0] === "err" && /25 years/.test(m[1]));
+    return `<tr${a === String(s[key]) ? ' class="cur"' : ""}><td>${a} yr</td><td>${fmt(x.sim.first.pay + x.sim.first.mi, 0)}${short}</td><td>${fmt(x.sim.totI)}</td><td${bad ? ' class="na"' : ""}>${bad ? "Not eligible" : country === "CA" ? (x.upfront ? pct(x.upfrontRate, 2) : "—") : (x.sim.totMI ? fmt(x.sim.totMI) : "—")}</td></tr>`;
+  }).join("");
+  if (country === "US") {
+    const names = { conv: "Conventional", fha: "FHA", va: "VA" };
+    const prow = ["conv", "fha", "va"].map(t => {
+      const st = { ...s, loanType: t }, x = Engine.compute("US", st), af = Engine.afford("US", st);
+      const err = x.msgs.find(m => m[0] === "err");
+      const monthly = (x.sim.first.pay + x.sim.first.mi) * x.n / 12;
+      const life = x.sim.totI + x.sim.totMI + (s.finance ? 0 : x.upfront);
+      return `<tr data-prog="${t}" style="cursor:pointer"${t === s.loanType ? ' class="cur"' : ""}><td>${names[t]}${t === "va" ? '<br><small style="color:var(--muted);font-weight:400">eligible service only</small>' : ""}</td>` +
+        (err ? `<td colspan="5" class="na" style="text-align:left;white-space:normal">${err[1]}</td>` :
+        `<td>${x.upfront ? fmt(x.upfront) : "—"}</td><td>${x.sim.first.mi ? fmt(x.sim.first.mi * x.n / 12) : "—"}</td><td>${fmt(monthly)}/mo</td><td>${fmt(life)}</td><td>${af && af.best ? fmt(af.best.p) : "—"}</td>`) + `</tr>`;
+    }).join("");
+    $("progTable").innerHTML = `<thead><tr><th>Program</th><th>Upfront fee</th><th>Monthly MI</th><th>P&amp;I+MI</th><th>Interest+MI (life)</th><th>Max price</th></tr></thead><tbody>${prow}</tbody>`;
+    $("progTable").querySelectorAll("tr[data-prog]").forEach(tr => tr.onclick = () => { $("loanType").value = tr.dataset.prog; readForm(); update(); });
+  }
+  $("amTable").innerHTML = `<thead><tr><th>Years</th><th>P&amp;I${country === "US" ? "+MI" : ""}</th><th>Interest</th><th>${country === "CA" ? "Premium" : "Total MI"}</th></tr></thead><tbody>${arows}</tbody>`;
+}
+
+function renderNotes() {
+  const CA = `
+  <div><h3>Payments</h3><ul>
+    <li>Fixed rates are quoted compounded semi-annually (Interest Act); variable rates commonly compound monthly. Periodic rate = (1 + r/2)<sup>2/n</sup> − 1.</li>
+    <li>Accelerated bi-weekly = monthly ÷ 2 every two weeks; accelerated weekly = monthly ÷ 4. That adds about one extra monthly payment a year.</li>
+    <li>The term (1–10 yrs) is the rate contract; the amortization is the payoff horizon. At renewal the payment is recalculated on the remaining amortization at the renewal rate.</li>
+    <li>Variable: adjustable-rate payments move with prime. Fixed-payment variables keep the payment and shift the principal/interest split until the trigger rate.</li>
+  </ul></div>
+  <div><h3>Down payment &amp; insurance</h3><ul>
+    <li>Minimum down: 5% of the first $500,000, 10% of the portion from $500,000 to $1.5M. $1.5M or more needs 20%.</li>
+    <li>Under 20% down requires default insurance. Premiums by loan-to-value: 4.00% (≤95%), 3.10% (≤90%), 2.80% (≤85%), added to the mortgage.</li>
+    <li>30-year insured amortization: first-time buyers or new builds, with a 0.20% premium surcharge.</li>
+    <li>ON, QC, MB and SK charge sales tax on the premium, paid at closing.</li>
+  </ul></div>
+  <div><h3>Qualifying</h3><ul>
+    <li>Stress test: qualify at the greater of your rate + 2% or 5.25%.</li>
+    <li>Land transfer tax: Ontario 0.5–2.5% (first-time refund up to $4,000), Toronto adds a matching municipal tax (rebate up to $4,475). BC 1–5% with a first-time exemption up to $8,000 on homes to $835k. Quebec and Montreal use bracketed welcome tax; other provinces use flat or registration-fee systems.</li>
+    <li>Insured limits: GDS 39% (payment, tax, heat, half of condo fees) and TDS 44% (plus other debts).</li>
+    <li>Sources: <a href="https://www.osfi-bsif.gc.ca/en/supervision/financial-institutions/banks/minimum-qualifying-rate-uninsured-mortgages" target="_blank" rel="noopener">OSFI MQR</a>, <a href="https://www.cmhc-schl.gc.ca/media-newsroom/notices/2024/cmhc-revises-homeowner-mortgage-loan-insurance-premiums" target="_blank" rel="noopener">CMHC premiums</a>.</li>
+  </ul></div>`;
+  const US = `
+  <div><h3>Payments</h3><ul>
+    <li>U.S. mortgages compound monthly: periodic rate = r/12, payment = P·i / (1 − (1+i)<sup>−N</sup>).</li>
+    <li>ARMs hold the initial rate for the fixed period, then reset to index + margin (rounded to ⅛%), limited by initial, periodic and lifetime caps and floored at the margin. SOFR ARMs adjust every 6 months.</li>
+    <li>Bi-weekly pays half the monthly amount 26 times a year, about one extra payment yearly.</li>
+  </ul></div>
+  <div><h3>Programs &amp; insurance</h3><ul>
+    <li>Conventional: 3% down for first-time buyers, otherwise 5%. Over 80% LTV needs PMI, which drops at 78% of the original value. 2026 conforming limit $832,750 (up to $1,249,125 in high-cost areas); above that is jumbo.</li>
+    <li>FHA: 3.5% down, 1.75% upfront MIP, annual MIP 0.15–0.75%. Under 10% down it lasts the loan's life, otherwise 11 years.</li>
+    <li>VA: 0% down, no monthly MI. Funding fee 2.15% first use / 3.3% subsequent with under 5% down; 1.5% at 5%+; 1.25% at 10%+.</li>
+  </ul></div>
+  <div><h3>Qualifying</h3><ul>
+    <li>Closing costs typically run 2–5% of the loan; some states and cities also charge transfer taxes. Points cost 1% of the loan each and buy a lower rate, so compare offers over how long you'll keep the loan.</li>
+    <li>Guideline debt-to-income: conventional 28/36 (automated approval can go to 45–50%), FHA 31/43, VA 41% back-end.</li>
+    <li>Sources: <a href="https://www.fhfa.gov/CLL" target="_blank" rel="noopener">FHFA loan limits</a>, <a href="https://www.va.gov/housing-assistance/home-loans/funding-fee-and-closing-costs/" target="_blank" rel="noopener">VA funding fee</a>, <a href="https://www.hud.gov/" target="_blank" rel="noopener">HUD (FHA)</a>.</li>
+  </ul></div>`;
+  $("notes").innerHTML = country === "CA" ? CA : US;
+}
+
+writeForm(); update(); showTab(tab);
+</script>
+
+<script>
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
