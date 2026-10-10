@@ -20,6 +20,12 @@ img{max-width:100%}
 [hidden]{display:none!important}
 </style>
 <title>CrossBorder Mortgage Calculator</title>
+<script>
+/* Set the theme before the page paints so it never flashes dark: light unless you chose otherwise */
+(function () { var r = document.documentElement, m = "light"; window.__hostTheme = r.getAttribute("data-theme");
+  try { m = localStorage.getItem("xb-theme-choice") || "light"; } catch (e) {}
+  if (m === "light" || m === "dark") r.setAttribute("data-theme", m); })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
@@ -1201,20 +1207,21 @@ $("copyBtn").onclick = () => {
 };
 
 /* ---------- Appearance: auto / light / dark ---------- */
-const hostTheme = document.documentElement.getAttribute("data-theme");
-let themeMode = "auto";
-try { themeMode = localStorage.getItem("xb-theme") || "auto"; } catch (e) {}
-function applyTheme(mode) {
-  themeMode = ["auto", "light", "dark"].includes(mode) ? mode : "auto";
+/* Light is the default; a mode is remembered only once you pick one */
+const hostTheme = window.__hostTheme ?? null;
+let themeMode = "light";
+try { themeMode = localStorage.getItem("xb-theme-choice") || "light"; } catch (e) {}
+function applyTheme(mode, save) {
+  themeMode = ["auto", "light", "dark"].includes(mode) ? mode : "light";
   const root = document.documentElement;
   if (themeMode === "auto") { if (hostTheme) root.setAttribute("data-theme", hostTheme); else root.removeAttribute("data-theme"); }
   else root.setAttribute("data-theme", themeMode);
   document.querySelectorAll(".theme-seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === themeMode));
   const dark = themeMode === "dark" || (themeMode === "auto" && (root.getAttribute("data-theme") === "dark" || (!root.getAttribute("data-theme") && matchMedia("(prefers-color-scheme: dark)").matches)));
   document.querySelectorAll('meta[name="theme-color"]').forEach(m => { m.removeAttribute("media"); m.setAttribute("content", dark ? "#0e1412" : "#1c6a51"); });
-  try { localStorage.setItem("xb-theme", themeMode); } catch (e) {}
+  if (save) try { localStorage.setItem("xb-theme-choice", themeMode); } catch (e) {}
 }
-document.querySelectorAll(".theme-seg button").forEach(b => b.onclick = () => applyTheme(b.dataset.mode));
+document.querySelectorAll(".theme-seg button").forEach(b => b.onclick = () => applyTheme(b.dataset.mode, true));
 applyTheme(themeMode);
 
 /* Round number inputs (rates, percentages) to 2 decimals when you leave the field */
