@@ -440,7 +440,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
   <form class="panel form" onsubmit="return false">
     <details class="grp" open><summary>What to solve for</summary><div class="fields">
       <div class="f full"><label for="slvMode">Solve for</label>
-        <select id="slvMode"><option value="rate">Rate that hits my payment</option><option value="term">Years needed for my payment</option><option value="loan">Biggest loan for my payment</option><option value="payment">Payment</option></select></div>
+        <select id="slvMode"><option value="rate">Highest rate I can afford</option><option value="term">How long to pay it off</option><option value="loan">Most I can borrow</option><option value="payment">My monthly payment</option></select></div>
       <div class="f full" data-s="loan"><label for="slvLoan">Loan amount</label><input type="number" id="slvLoan" min="0" step="1000"></div>
       <div class="f" data-s="pay"><label for="slvPay">Target monthly payment</label><input type="number" id="slvPay" min="0" step="50"></div>
       <div class="f" data-s="rate"><label for="slvRate">Rate %</label><input type="number" id="slvRate" step="0.01"></div>
@@ -1350,9 +1350,9 @@ function renderSolve(s) {
   $("slvYearsLbl").textContent = country === "CA" ? "Amortization (yrs)" : "Loan term (yrs)";
   const comp = o.comp === "semi" ? "compounded semi-annually" : "compounded monthly";
   let label = "", big = "—", sub = "";
-  if (mode === "rate") { label = "Rate needed"; if (o.tooLow) sub = `A ${fmt(+s.slvPay)} payment doesn't even repay ${fmt(+s.slvLoan)} in ${s.slvYears} years at 0%. Raise the payment or lengthen the loan.`; else { big = o.capped ? "30%+" : o.value.toFixed(2) + "%"; sub = `The highest rate (${comp}) at which ${fmt(+s.slvLoan)} over ${s.slvYears} years costs ${fmt(+s.slvPay)} a month or less.`; } }
-  if (mode === "term") { label = "Years needed"; if (o.value == null) sub = `${fmt(+s.slvPay)} doesn't cover the ${fmt(o.interestOnly)} of monthly interest, so the loan would never be repaid.`; else { big = yrs(o.value); sub = `${fmt(+s.slvLoan)} at ${(+s.slvRate).toFixed(2)}% paid off with ${fmt(+s.slvPay)} a month.${country === "CA" && o.value > 30 ? " Longer than the 30-year maximum for most lenders." : ""}${country === "US" && o.value > 30 ? " Longer than a standard 30-year U.S. loan." : ""}`; } }
-  if (mode === "loan") { label = "Biggest loan"; big = fmt(o.value); sub = `What ${fmt(+s.slvPay)} a month repays over ${s.slvYears} years at ${(+s.slvRate).toFixed(2)}%. Taxes, insurance and fees come on top.`; }
+  if (mode === "rate") { label = "Highest rate you can afford"; if (o.tooLow) sub = `A ${fmt(+s.slvPay)} payment doesn't even repay ${fmt(+s.slvLoan)} in ${s.slvYears} years at 0%. Raise the payment or lengthen the loan.`; else { big = o.capped ? "30%+" : o.value.toFixed(2) + "%"; sub = `To keep the payment on ${fmt(+s.slvLoan)} at or under ${fmt(+s.slvPay)} a month over ${s.slvYears} years, your rate needs to be ${o.capped ? "30% or more" : o.value.toFixed(2) + "% or lower"} (${comp}).`; } }
+  if (mode === "term") { label = "Time to pay it off"; if (o.value == null) sub = `${fmt(+s.slvPay)} doesn't cover the ${fmt(o.interestOnly)} of monthly interest, so the loan would never be repaid.`; else { big = yrs(o.value); sub = `${fmt(+s.slvLoan)} at ${(+s.slvRate).toFixed(2)}% paid off with ${fmt(+s.slvPay)} a month.${country === "CA" && o.value > 30 ? " Longer than the 30-year maximum for most lenders." : ""}${country === "US" && o.value > 30 ? " Longer than a standard 30-year U.S. loan." : ""}`; } }
+  if (mode === "loan") { label = "Most you can borrow"; big = fmt(o.value); sub = `What ${fmt(+s.slvPay)} a month repays over ${s.slvYears} years at ${(+s.slvRate).toFixed(2)}%. Taxes, insurance and fees come on top.`; }
   if (mode === "payment") { label = "Monthly payment"; big = fmt(o.value, 2); sub = `Principal and interest on ${fmt(+s.slvLoan)} over ${s.slvYears} years at ${(+s.slvRate).toFixed(2)}% ${comp}.`; }
   $("slvLabel").textContent = label; $("slvBig").textContent = big; $("slvSub").textContent = sub;
   $("slvGridNote").textContent = `For a ${fmt(o.gridLoan)} loan. Green cells are at or under ${fmt(o.target)} a month.`;
