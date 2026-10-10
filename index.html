@@ -1092,7 +1092,7 @@ function renderSummary(r, s) {
     facts.push(["Stress-test rate", `${r.qRate.toFixed(2)}%`]);
     facts.push(["Qualifying payment", `${fmt(r.qPay)} / mo`]);
     if (r.triggerRate) facts.push(["Trigger rate", `${r.triggerRate.toFixed(2)}%`]);
-    if (r.gds != null) facts.push(['<abbr title="Gross Debt Service / Total Debt Service: see What do these ratios mean?">GDS / TDS</abbr>', `${pct(r.gds)} / ${pct(r.tds)}`]);
+    if (r.gds != null) facts.push(['<abbr title="Share of your income going to your home / to all your debts">GDS / TDS</abbr>', `${pct(r.gds)} / ${pct(r.tds)}`]);
   } else {
     if (r.arm) {
       facts.push([`Rate after ${r.arm.initYears} yrs`, `${r.arm.firstReset.toFixed(2)}%`]);
@@ -1101,7 +1101,7 @@ function renderSummary(r, s) {
     }
     if (r.sim.totMI > 0) facts.push([r.type === "fha" ? "Total FHA MIP" : "Total PMI", fmt(sim.totMI)]);
     if (sim.miEnd != null && r.type === "conv") facts.push(["PMI ends", `after ${yrs(sim.miEnd)}`]);
-    if (r.front != null) facts.push(['<abbr title="Debt-to-income: housing costs / all debts as a share of gross income">DTI front / back</abbr>', `${pct(r.front)} / ${pct(r.back)}`]);
+    if (r.front != null) facts.push(['<abbr title="Share of your income going to your home / to all your debts">DTI front / back</abbr>', `${pct(r.front)} / ${pct(r.back)}`]);
   }
   facts.push(["Total interest", fmt(sim.totI)]);
   facts.push(["Paid off in", yrs(sim.payoffYears)]);
@@ -1266,13 +1266,13 @@ $("mbarBtn").onclick = () => document.querySelector(".sum").scrollIntoView({ beh
 /* ---------- Ratio definitions ---------- */
 function renderRatioText() {
   $("ratioText").innerHTML = country === "CA" ? `<dl class="ratio-defs">
-    <div><dt>GDS: Gross Debt Service <span class="lim">limit 39%</span></dt><dd>The share of your gross (before-tax) monthly income that goes to housing: the mortgage payment at the stress-test rate, property tax, heating, and half of any condo fees.</dd></div>
-    <div><dt>TDS: Total Debt Service <span class="lim">limit 44%</span></dt><dd>GDS plus every other debt payment: car loans, student loans, credit card minimums and lines of credit.</dd></div>
-    <div><dd>Lenders need both to be under the limit. These are the limits for insured mortgages (under 20% down); lenders use similar ones for uninsured mortgages.</dd></div></dl>`
+    <div><dt>GDS: how much of your income goes to your home <span class="lim">max 39%</span></dt><dd>Your mortgage payment, property tax, heating and half of any condo fees, compared with your income before tax.</dd></div>
+    <div><dt>TDS: how much of your income goes to all your debts <span class="lim">max 44%</span></dt><dd>Everything in GDS, plus car loans, student loans, credit cards and lines of credit.</dd></div>
+    <div><dd>Lenders work these out at a higher "stress-test" rate, to be sure you could still pay if rates go up.</dd></div></dl>`
   : `<dl class="ratio-defs">
-    <div><dt>Front-end DTI: housing ratio <span class="lim">28% conv · 31% FHA</span></dt><dd>The share of your gross (before-tax) monthly income that goes to housing: mortgage payment, PMI or MIP, property tax, home insurance and HOA dues.</dd></div>
-    <div><dt>Back-end DTI: total debt-to-income <span class="lim">36% conv · 43% FHA · 41% VA</span></dt><dd>The housing ratio plus every other debt payment: car loans, student loans, credit card minimums and personal loans.</dd></div>
-    <div><dd>These are guideline limits. Lenders' automated underwriting often approves higher ratios, up to about 45–50%, with strong credit or savings.</dd></div></dl>`;
+    <div><dt>Housing ratio: how much of your income goes to your home <span class="lim">max 28% conv · 31% FHA</span></dt><dd>Your mortgage payment, mortgage insurance, property tax, home insurance and HOA dues, compared with your income before tax.</dd></div>
+    <div><dt>Total debt ratio: how much of your income goes to all your debts <span class="lim">max 36% conv · 43% FHA · 41% VA</span></dt><dd>Everything in the housing ratio, plus car loans, student loans, credit cards and personal loans.</dd></div>
+    <div><dd>These are guidelines. With good credit or savings, lenders often approve up to about 45–50%.</dd></div></dl>`;
 }
 
 /* ---------- Install prompt (only in the installable app, never inside Claude) ---------- */
