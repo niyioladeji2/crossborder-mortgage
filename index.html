@@ -161,6 +161,18 @@ details.sched>summary{cursor:pointer;font:600 14px var(--body);color:var(--accen
 @media (max-width:860px){.tool{grid-template-columns:minmax(0,1fr)}}
 td.fit{background:var(--ok-bg);color:var(--ok);font-weight:600}
 td.hot{outline:2px solid var(--accent);outline-offset:-2px}
+details.explain{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}
+details.explain>summary{cursor:pointer;font:600 14px var(--body);color:var(--accent);padding:4px 0}
+.ratio-defs{display:grid;gap:12px;margin:10px 0 0;font-size:14px}
+.ratio-defs dt{font-weight:600}
+.ratio-defs dd{margin:2px 0 0;color:var(--muted)}
+.ratio-defs .lim{display:inline-block;font:600 12px var(--body);padding:2px 8px;border-radius:999px;background:var(--ok-bg);color:var(--ok);margin-left:6px;vertical-align:1px}
+abbr[title]{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.install{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:0 0 14px}
+.install img{border-radius:10px;flex:none}
+.install-txt{display:grid;flex:1;min-width:0;font-size:13.5px;line-height:1.35}
+.install-txt span{color:var(--muted)}
+.install-x{background:none;border:0;color:var(--muted);font-size:16px;cursor:pointer;padding:6px;flex:none}
 footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
 </style>
 </head>
@@ -185,6 +197,13 @@ footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
     </div>
   </div>
 </header>
+
+<div class="install" id="installBanner" hidden role="region" aria-label="Install the app">
+  <img src="icons/icon-192.png" alt="" width="40" height="40">
+  <div class="install-txt"><b>Add CrossBorder to your home screen</b><span id="installHow">Opens full-screen and works offline.</span></div>
+  <button type="button" class="btn install-go" id="installBtn" hidden>Install</button>
+  <button type="button" class="install-x" id="installClose" aria-label="Dismiss">✕</button>
+</div>
 
 <nav class="tabs" role="tablist" aria-label="Tools">
   <button role="tab" id="t-calc" aria-controls="tab-calc" aria-selected="true">Mortgage</button>
@@ -309,6 +328,7 @@ footer{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:80ch}
       <p id="affordNote">Based on household income, other debts and the cash you have for a down payment.</p>
       <div id="afford"></div>
       <div id="comfortOut"></div>
+      <details class="explain" id="ratioExplain"><summary>What do these ratios mean?</summary><div id="ratioText"></div></details>
     </section>
     <section class="panel card">
       <h2>Cash to close &amp; true monthly cost</h2>
@@ -1015,7 +1035,7 @@ $("useMin").onclick = () => {
 function update() {
   visibility(); save();
   const s = state[country], r = Engine.compute(country, s);
-  renderSummary(r, s); renderAfford(r, s); renderCash(r, s); renderOffers(s); renderPenalty(s); renderCharts(r);
+  renderRatioText(); renderSummary(r, s); renderAfford(r, s); renderCash(r, s); renderOffers(s); renderPenalty(s); renderCharts(r);
   renderRent(s); renderRefi(s); renderSolve(s); renderSchedule(r); renderTables(r, s); renderNotes();
 }
 
@@ -1072,7 +1092,7 @@ function renderSummary(r, s) {
     facts.push(["Stress-test rate", `${r.qRate.toFixed(2)}%`]);
     facts.push(["Qualifying payment", `${fmt(r.qPay)} / mo`]);
     if (r.triggerRate) facts.push(["Trigger rate", `${r.triggerRate.toFixed(2)}%`]);
-    if (r.gds != null) facts.push(["GDS / TDS", `${pct(r.gds)} / ${pct(r.tds)}`]);
+    if (r.gds != null) facts.push(['<abbr title="Gross Debt Service / Total Debt Service: see What do these ratios mean?">GDS / TDS</abbr>', `${pct(r.gds)} / ${pct(r.tds)}`]);
   } else {
     if (r.arm) {
       facts.push([`Rate after ${r.arm.initYears} yrs`, `${r.arm.firstReset.toFixed(2)}%`]);
@@ -1081,7 +1101,7 @@ function renderSummary(r, s) {
     }
     if (r.sim.totMI > 0) facts.push([r.type === "fha" ? "Total FHA MIP" : "Total PMI", fmt(sim.totMI)]);
     if (sim.miEnd != null && r.type === "conv") facts.push(["PMI ends", `after ${yrs(sim.miEnd)}`]);
-    if (r.front != null) facts.push(["DTI front / back", `${pct(r.front)} / ${pct(r.back)}`]);
+    if (r.front != null) facts.push(['<abbr title="Debt-to-income: housing costs / all debts as a share of gross income">DTI front / back</abbr>', `${pct(r.front)} / ${pct(r.back)}`]);
   }
   facts.push(["Total interest", fmt(sim.totI)]);
   facts.push(["Paid off in", yrs(sim.payoffYears)]);
@@ -1119,7 +1139,7 @@ function renderAfford(r, s) {
   const b = a.best, rateNote = `Qualifying at ${a.qRate.toFixed(2)}%${country === "CA" ? " (stress test)" : a.qRate !== +s.rate ? " (ARM qualifying rate)" : ""} · ${a.limits}`;
   $("affordNote").textContent = rateNote;
   const ok = (+s.income || 0) >= a.incomeNeeded - 1;
-  const need = `<span class="pill ${ok ? "" : "bad"}">${ok ? "This home passes" : "This home is over your limit"}</span> Income needed for ${fmt(+s.price)}: <b>${fmt(Math.ceil(a.incomeNeeded / 100) * 100)}</b>/yr`;
+  const need = `<span class="pill ${ok ? "" : "bad"}">${ok ? "This home passes" : "This home is over your limit"}</span> Income needed for ${fmt(+s.price)}: <span style="white-space:nowrap"><b>${fmt(Math.ceil(a.incomeNeeded / 100) * 100)}</b>/yr</span>`;
   if (!b) { el.innerHTML = `<div class="empty">With this income, debt and down payment, the ratios don't support a mortgage at ${a.qRate.toFixed(2)}%. Lower debts or a larger down payment would help.</div><div class="affbar">${need}</div>`; return; }
   el.innerHTML = `<div class="aff">
       <div><div class="lbl">Max home price</div><div class="num">${fmt(b.p)}</div></div>
@@ -1242,6 +1262,36 @@ if ("IntersectionObserver" in window) {
   new IntersectionObserver(es => es.forEach(e => { mbarState.sumVisible = e.intersectionRatio > 0.35; syncMbar(); }), { threshold: [0, 0.35, 1] }).observe(document.querySelector(".sum"));
 }
 $("mbarBtn").onclick = () => document.querySelector(".sum").scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+
+/* ---------- Ratio definitions ---------- */
+function renderRatioText() {
+  $("ratioText").innerHTML = country === "CA" ? `<dl class="ratio-defs">
+    <div><dt>GDS: Gross Debt Service <span class="lim">limit 39%</span></dt><dd>The share of your gross (before-tax) monthly income that goes to housing: the mortgage payment at the stress-test rate, property tax, heating, and half of any condo fees.</dd></div>
+    <div><dt>TDS: Total Debt Service <span class="lim">limit 44%</span></dt><dd>GDS plus every other debt payment: car loans, student loans, credit card minimums and lines of credit.</dd></div>
+    <div><dd>Lenders need both to be under the limit. These are the limits for insured mortgages (under 20% down); lenders use similar ones for uninsured mortgages.</dd></div></dl>`
+  : `<dl class="ratio-defs">
+    <div><dt>Front-end DTI: housing ratio <span class="lim">28% conv · 31% FHA</span></dt><dd>The share of your gross (before-tax) monthly income that goes to housing: mortgage payment, PMI or MIP, property tax, home insurance and HOA dues.</dd></div>
+    <div><dt>Back-end DTI: total debt-to-income <span class="lim">36% conv · 43% FHA · 41% VA</span></dt><dd>The housing ratio plus every other debt payment: car loans, student loans, credit card minimums and personal loans.</dd></div>
+    <div><dd>These are guideline limits. Lenders' automated underwriting often approves higher ratios, up to about 45–50%, with strong credit or savings.</dd></div></dl>`;
+}
+
+/* ---------- Install prompt (only in the installable app, never inside Claude) ---------- */
+(function () {
+  if (!document.querySelector('link[rel="manifest"]')) return;
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  if (standalone) return;
+  let snoozed = false;
+  try { snoozed = Date.now() < +(localStorage.getItem("xb-install-snooze") || 0); } catch (e) {}
+  if (snoozed) return;
+  const banner = $("installBanner"), btn = $("installBtn");
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  let deferred = null;
+  $("installClose").onclick = () => { banner.hidden = true; try { localStorage.setItem("xb-install-snooze", Date.now() + 30 * 864e5); } catch (e) {} };
+  if (ios) { $("installHow").textContent = "Tap the Share button, then “Add to Home Screen”."; banner.hidden = false; }
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferred = e; btn.hidden = false; $("installHow").textContent = "Opens full-screen and works offline."; banner.hidden = false; });
+  btn.onclick = async () => { if (!deferred) return; deferred.prompt(); try { await deferred.userChoice; } catch (e) {} deferred = null; banner.hidden = true; };
+  addEventListener("appinstalled", () => { banner.hidden = true; });
+})();
 
 /* ---------- Tabs ---------- */
 const TABS = ["calc", "rent", "refi", "solve"];
