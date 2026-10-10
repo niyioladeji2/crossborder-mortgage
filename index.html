@@ -690,7 +690,7 @@ const Engine = (() => {
     if (inc > 0) {
       front = monthlyHousing / inc; back = (monthlyHousing + (+s.debts || 0)) / inc;
       const lim = type === "fha" ? [0.31, 0.43] : type === "va" ? [null, 0.41] : [0.28, 0.36];
-      if (lim[0] && front > lim[0]) msgs.push(["warn", `Housing ratio is ${(front * 100).toFixed(2)}%, above the ${lim[0] * 100}% guideline. Automated underwriting can approve higher with strong credit or reserves.`]);
+      if (lim[0] && front > lim[0]) msgs.push(["warn", `Housing ratio is ${(front * 100).toFixed(2)}%, above the ${Math.round(lim[0] * 100)}% guideline. Automated underwriting can approve higher with strong credit or reserves.`]);
       if (back > lim[1]) msgs.push(["warn", `Total debt-to-income is ${(back * 100).toFixed(2)}%, above the ${Math.round(lim[1] * 100)}% guideline.`]);
     }
     if (mi && type === "conv") msgs.push(["info", `PMI (${miRate.toFixed(2)}%/yr) ends automatically when the balance reaches 78% of the original value; you can ask to cancel at 80%.`]);
@@ -767,7 +767,7 @@ const Engine = (() => {
     const best = searchPrice(D, D * 34 + lim[1] * inc * ann * 1.3 + 2000, test);
     const cur = housingFor(+s.price || 0).h;
     const incomeNeeded = Math.max(lim[0] ? cur / lim[0] : 0, (cur + debts) / lim[1]) * 12;
-    return { qRate: q, best, incomeNeeded, limits: lim[0] ? `Housing ${lim[0] * 100}% · Total ${lim[1] * 100}%` : `Total ${lim[1] * 100}%` };
+    return { qRate: q, best, incomeNeeded, limits: lim[0] ? `Housing ${Math.round(lim[0] * 100)}% · Total ${Math.round(lim[1] * 100)}%` : `Total ${Math.round(lim[1] * 100)}%` };
   }
 
   /* ---------- Comfortable budget: housing cost within a share of take-home pay, at the real rate ---------- */
